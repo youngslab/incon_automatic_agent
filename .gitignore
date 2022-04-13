@@ -131,3 +131,4 @@ dmypy.json
 # configuration file
 .accounts.json
 .incon.json
+.g2b.json

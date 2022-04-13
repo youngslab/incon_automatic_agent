@@ -309,7 +309,7 @@ class Bid:
         return f"{self.market:6s}) {self.number:20s}[{self.title:.6s}]  @ {self.price} won"
 
     def is_completed(self):
-        return incon_listitem_is_completed(self)
+        return incon_listitem_is_completed(self.__listitem)
 
     def complete(self):
         return incon_listitem_complete(self.__driver, self.__listitem)

@@ -36,14 +36,14 @@ def discord_get_market_emoji(market):
         return discord_get_char_emoji("k")
     elif market == "한국전력":
         return discord_get_char_emoji("h")
-    raise Exception("Not supporte market {}".format(market))
-
+    else:
+        return discord_get_char_emoji("e")
 
 # common format for everything
 def discord_format_item(x) -> str:
     complete_sign = ":small_blue_diamond:" if x.is_completed() else ":small_orange_diamond:"
     return f"{complete_sign} {discord_get_market_emoji(x.market)}" \
-        f"`{ascii_only(x.notice_no):20s}` :name_badge: `{x.notice_title:.10s}`"
+        f"`{ascii_only(x.number):20s}` :name_badge: `{x.title:.10s}`"
 
 
 def discord_format_pre(pre) -> str:
@@ -104,44 +104,47 @@ async def main():
 
 
         dp = create_data_provider(accounts['incon'])
-        # ms = create_markets(accounts['g2b'])
+        ms = create_markets(accounts['g2b'])
 
         if settings_enable_pres:            
             pres = dp.get_pre_data()        
             for pre in pres:
-                print(pre)
-                # market = ms.get(pre.market)
-                # if not market:                    
-                #     continue
+                market = ms.get(pre.market)
+                if not market:                    
+                    continue
 
-                # if market.register(pre):                    
-                #     print(f"Register {pre.notice_no}. result: {pre.complete()}")
+                if market.register(pre):
+                    pre.complete()
+                    print(f"agent) Registered {pre.number} - {pre.title} ")
 
-            # # Report Current Status
-            # await notifier.send(discord_format_subtitle("Pre Stage"))
-            # await print_line_break(notifier)
-            # await notifier.send(discord_format_pres(pres))
-            # await print_line_break(notifier)
-        print("-----------------------------")
-        
+            # Report Current Status
+            await notifier.send(discord_format_subtitle("Pre Stage"))
+            await print_line_break(notifier)
+            await notifier.send(discord_format_pres(pres))
+            await print_line_break(notifier)
 
         if settings_enable_bids:                
             bids = dp.get_bid_data()
-            for bid in bids:
-                print(bid)
-        #         market = ms.get(bid.market)
-        #         if not market:
-        #             continue
+            for bid in bids:                
+                market = ms.get(bid.market)
+                if not market:
+                    continue
 
-        #         success, _ = market.participate(bid)
-        #         if success:                    
-        #             bid.complete()
+                if not bid.is_ready:
+                    continue
+
+                success, message = market.participate(bid)
+                if success:                    
+                    bid.complete()
+                    print(f"agent) Registered {bid.number} - {bid.title} ")
+                else:
+                    print(f"agent) Can not participate in {bid.number}, {bid.title} - {message}")
             
-        #     # Report Current Status
-        #     await notifier.send(discord_format_subtitle("Bid Stage"))
-        #     await print_line_break(notifier)
-        #     await notifier.send(discord_format_bids(bids))
-        #     await print_line_break(notifier)
+            # Report Current Status
+            await notifier.send(discord_format_subtitle("Bid Stage"))
+            await print_line_break(notifier)
+            await notifier.send(discord_format_bids(bids))
+            await print_line_break(notifier)
 
         
     except Exception as e:        

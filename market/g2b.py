@@ -15,37 +15,44 @@ def _edit_mypage(driver):
             edit_btn = (By.XPATH, '//*[@id="container"]/div[2]/div/a[1]')
             auto.selenium.click(driver, edit_btn)
 
-def _open_item_find_window(driver):
+def _open_item_find_window(driver):    
     with auto.selenium.Frame(driver, (By.ID, 'sub')):
         with auto.selenium.Frame(driver, (By.NAME, 'main')):
+            print("g2b) click item find button")
             search_btn = (By.XPATH, '//*[@id="frm_addProd"]/div[3]/table/tbody/tr/td[1]/div/button')
             return auto.selenium.click(driver, search_btn)
 
-def _find_product(driver, pn):
+def _find_product(driver, pn):    
     with auto.selenium.Window(driver, "[팝업] 세부품명찾기: 나라장터"):
+        print(f"g2b) type a product number={pn}")
         pn_input = (By.ID, 'detailPrdnmNo')
         auto.selenium.send_keys(driver, pn_input, pn)
 
         search_btn = (By.ID, 'bt_search')
         auto.selenium.click(driver, search_btn)
-        # select item
+        # select item        
         first_item = (By.XPATH, '//*[@id="container"]/div[1]/table/tbody/tr/td[2]/a')    
         auto.selenium.click(driver, first_item)
 
 def _register_product(driver):
+    # Move to frame    
     with auto.selenium.Frame(driver, (By.ID, 'sub')):
         with auto.selenium.Frame(driver, (By.NAME, 'main')):
             register_btn = (By.XPATH,'//*[@id="frm_addProd"]/div[2]/a')
+            print("g2b) click register button")
             success = auto.selenium.click(driver, register_btn)
             if not success:
                 return False
-            time.sleep(1)
-            alert = driver.switch_to.alert
+
+            alert = auto.selenium.wait_until_alert(driver)
             alert.accept()
-    time.sleep(1)
+            print(f"g2b) Accepted alert.")
+            
+    
     with auto.selenium.Window(driver, "Message: 나라장터"):
         confirm_btn = ( By.XPATH, '//*[@id="container3"]/div[2]/div/a')
         auto.selenium.click(driver, confirm_btn)
+        print(f"g2b) click confirm button.")
 
 
 def _login_with_certificate(password):
@@ -81,8 +88,6 @@ def _login_with_certificate(password):
 def go_homepage(driver):
     g2b_website = 'https://www.g2b.go.kr'
     driver.get(g2b_website)
-
-
 
 # Login
 def login(driver, password):
@@ -127,19 +132,30 @@ def get_registered_products(driver):
             return [ item.text for item in items ]
 
 
-class G2B:
-    def __init__(self, driver, pw):
-        self.driver = driver
-        go_homepage(driver)
-        login(driver, pw)
-    
-    def preregister(self, pns):        
-        go_product_registration_page(self.driver)
-        registered_pns = get_registered_products(self.driver)
-        for pn in pns:
-            if pn in registered_pns:
-                continue
-            register_product(self.driver, pn)
-        return True
-            
+def g2b_register(driver, pns):
+    go_product_registration_page(driver)
+    registered_pns = get_registered_products(driver)
+    for pn in pns:
+        if pn in registered_pns:
+            # print(f"g2b) {pn} is already registered.")
+            continue
+        register_product(driver, pn)
+        # print(f"g2b) {pn} is registered.")
+    return True
 
+class G2B:
+    def __init__(self, pw):
+        self.__driver = auto.selenium.create_edge_driver()
+        go_homepage(self.__driver)
+        login(self.__driver, pw)
+    
+    def __register(self, pns):        
+        return g2b_register(self.__driver, pns)
+            
+    def register(self, pre):
+        product_numbers = pre.number.split(",")
+        product_numbers = [ pn.strip() for pn in product_numbers ]
+        return self.__register(product_numbers)
+
+    def participate(self, bid):        
+        return False, "Not implemented"
