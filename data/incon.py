@@ -1,4 +1,6 @@
 
+import sys
+sys.path.insert(1, 'C:\\Users\\Jaeyoung\\dev\\incon_project')
 
 import auto.selenium
 from selenium.webdriver.common.by import By
@@ -45,6 +47,7 @@ def incon_listitem_is_completed(listitem):
     return 'ui-icon-check' in completion_button.get_attribute("class")
 
 def incon_listitem_complete(driver, listitem):
+    print("incon) click listitem completion button")
     completion_button = incon_listitem_get_button(listitem)
     return auto.selenium.click_element(driver, completion_button)
 
@@ -165,6 +168,7 @@ class Preregistration:
         return incon_listitem_is_completed(self.__element)
         
     def complete(self):
+        print("incon) pre) click item completion")
         return incon_listitem_complete(self.__driver, self.__element)
 
     def __str__(self):
@@ -383,7 +387,10 @@ def load_settings():
 if __name__ == "__main__":
     id, pw = load_settings()
     ic = Incon(id, pw)
-    pres = ic.get_preregistration_data()
+    pres = ic.get_pre_data()
     for pre in pres:
         print(pre)
 
+    bids = ic.get_bid_data()
+    for bid in bids:
+        print(bid)

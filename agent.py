@@ -1,6 +1,6 @@
 
 import asyncio
-import sys
+import sys, time
 import traceback
 
 sys.path.insert(1, 'C:\\Users\\Jaeyoung\\dev\\incon_project')
@@ -106,6 +106,7 @@ async def main():
         dp = create_data_provider(accounts['incon'])
         ms = create_markets(accounts['g2b'])
 
+
         if settings_enable_pres:            
             pres = dp.get_pre_data()        
             for pre in pres:
@@ -113,8 +114,14 @@ async def main():
                 if not market:                    
                     continue
 
+                if pre.is_completed():
+                    continue
+
                 if market.register(pre):
                     pre.complete()
+                    time.sleep(0.1)
+                    if not pre.is_completed():
+                        raise Exception(f"agent) Clicked But Not Completed {pre.number}")
                     print(f"agent) Registered {pre.number} - {pre.title} ")
 
             # Report Current Status
@@ -128,6 +135,9 @@ async def main():
             for bid in bids:                
                 market = ms.get(bid.market)
                 if not market:
+                    continue
+
+                if bid.is_completed():
                     continue
 
                 if not bid.is_ready:

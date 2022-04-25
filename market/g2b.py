@@ -3,6 +3,8 @@ import sys, time
 from selenium.webdriver.common.by import By
 import auto.selenium, auto.windows
 
+from incon_automatic_agent.res.resource_manager import resource_manager
+
 
 def _go_mypage(driver):
     mypage = 'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do'
@@ -55,35 +57,6 @@ def _register_product(driver):
         print(f"g2b) click confirm button.")
 
 
-def _login_with_certificate(password):
-    
-     # TODO: wait until exisiting the window handle for "인증서 선택"
-    i = 0
-    hwnd = None
-    while not hwnd:
-        hwnd = auto.windows.find_window_handle("인증서 선택")
-        i += 1
-        if i >= 10: 
-            return False        
-        time.sleep(1)
-
-    # make it foreground
-    auto.windows.bring_window_to_top(hwnd)
-
-    # click password input box to focus on
-    auto.windows.click(hwnd, 242, 478 + 30)
-    time.sleep(1)
-
-    # put password
-    auto.windows.type(password)
-
-    # click ok button
-    auto.windows.click(hwnd, 152, 516 + 30)    
-
-    # TODO: Wait until reload the logout panel.    
-    time.sleep(1)
-    return True
-
 # Go to the homepage to login
 def go_homepage(driver):
     g2b_website = 'https://www.g2b.go.kr'
@@ -99,7 +72,10 @@ def login(driver, password):
             return False
     
     # try to login with certificate
-    return _login_with_certificate(password)
+    import market.certificate, res.resource_manager
+    resmgr = res.resource_manager.resource_manager()
+    return market.certificate.cert_login(resmgr, password)
+
     
 
 # Go to the page where we can register a new product
@@ -137,11 +113,14 @@ def g2b_register(driver, pns):
     registered_pns = get_registered_products(driver)
     for pn in pns:
         if pn in registered_pns:
-            # print(f"g2b) {pn} is already registered.")
+            print(f"g2b) {pn} is already registered.")
             continue
         register_product(driver, pn)
-        # print(f"g2b) {pn} is registered.")
+        print(f"g2b) {pn} is registered.")
     return True
+
+
+
 
 class G2B:
     def __init__(self, pw):
