@@ -1,7 +1,5 @@
 
 import sys
-sys.path.insert(1, 'C:\\Users\\Jaeyoung\\dev\\incon_project')
-
 import auto.selenium
 from selenium.webdriver.common.by import By
 

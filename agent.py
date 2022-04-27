@@ -2,9 +2,6 @@
 import asyncio
 import sys, time
 import traceback
-
-sys.path.insert(1, 'C:\\Users\\Jaeyoung\\dev\\incon_project')
-
 from data.incon import Incon
 from market.g2b import G2B
 from bot.discord import Discord
