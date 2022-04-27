@@ -3,8 +3,11 @@ import sys, time
 from selenium.webdriver.common.by import By
 import auto.selenium, auto.windows
 
-from incon_automatic_agent.res.resource_manager import resource_manager
 
+from res.resource_manager import resource_manager
+
+from market.safeg2b import *
+from market.safeg2b_execution import *
 
 def _go_mypage(driver):
     mypage = 'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do'
@@ -72,9 +75,8 @@ def login(driver, password):
             return False
     
     # try to login with certificate
-    import market.certificate, res.resource_manager
-    resmgr = res.resource_manager.resource_manager()
-    return market.certificate.cert_login(resmgr, password)
+    import market.certificate
+    return market.certificate.cert_login(password)
 
     
 
@@ -123,10 +125,18 @@ def g2b_register(driver, pns):
 
 
 class G2B:
-    def __init__(self, pw):
+    def __init__(self, pw, rn):
         self.__driver = auto.selenium.create_edge_driver()
+        self.__pw = pw
         go_homepage(self.__driver)
         login(self.__driver, pw)
+        self.__driver.minimize_window()
+
+        # safe g2b
+        safeg2b_run()
+        safeg2b_initialize()
+        safeg2b_login(pw, rn)
+
     
     def __register(self, pns):        
         return g2b_register(self.__driver, pns)
@@ -137,4 +147,9 @@ class G2B:
         return self.__register(product_numbers)
 
     def participate(self, bid):        
-        return False, "Not implemented"
+        print(f"g2b) participate in {bid.number} price={bid.price}")
+        self.__driver.minimize_window()
+        if not safeg2b_is_running():
+            return False, "safeg2b instance is not running"
+        safeg2b_participate(self.__pw, bid.number, str(bid.price))
+        return True, None

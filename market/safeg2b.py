@@ -1,33 +1,19 @@
 
 import os, sys, time, random
-sys.path.insert(1, 'C:\\Users\\Jaeyoung\\dev\\incon_project')
-
 import auto.windows
 import pyautogui
 import win32gui, win32con, win32api, win32process
 
+import market.certificate
+from res.resource_manager import resource_manager as resmgr
+
 def safeg2b_get_window_title():
     return "나라장터: 국가종합전자조달 - SafeG2B"
 
-def safeg2b_get_executable_path():
-    return "C:\\Windows\\pps\\SafeG2B\\"
-
-def safeg2b_main_window_wait_until(timeout=30):
+def safeg2b_main_window_wait_until(timeout=60):
     window_title = safeg2b_get_window_title()
     return auto.windows.window_wait_until(window_title, timeout=timeout)
 
-def safeg2b_launch():
-    # Check it already runs
-    title = safeg2b_get_window_title()
-    hwnd = auto.windows.window_wait_until(title)
-    print(f"hwnd={hwnd}")
-    if hwnd:
-        return
-
-    # Run    
-    os.chdir(safeg2b_get_executable_path())
-    # TODO: Deal with UAC.
-    os.system("START G2BLauncher.exe")
 
 # ---------------------------
 # Common APIs
@@ -36,7 +22,7 @@ def safeg2b_launch():
 def safeg2b_window_message_get_title():
     return "Message: 나라장터 - SafeG2B"
 
-def safeg2b_window_message_confirm(resmgr):
+def safeg2b_window_message_confirm():
     title = safeg2b_window_message_get_title()
     hwnd = auto.windows.window_wait_until(title, timeout=30)
     auto.windows.bring_window_to_top(hwnd)
@@ -46,22 +32,25 @@ def safeg2b_window_message_confirm(resmgr):
 # Log In APIs
 # ---------------------------
 
-def safeg2b_go_to_login_page(resmgr):
+def safeg2b_go_to_login_page():
     try:
         auto.windows.img_click(resmgr.get('safeg2b_0_etc_homepage.png'))
     except Exception as _:
         pass
 
-def safeg2b_is_login(resmgr):
+def safeg2b_is_login():
     # Wait until 15sec to check the login state.
     pos = auto.windows.img_wait_until(resmgr.get('safeg2b_login_btn.png'), grayscale=False, confidence=0.8, timeout=15)
     return True if pos is None else False
 
-def safeg2b_certificate_login(resmgr, pw):
-    import certificate
-    certificate.cert_login(resmgr, pw)
+def safeg2b_certificate_login( pw):    
+    market.certificate.cert_login( pw)
  
-def safeg2b_login(resmgr, pw:str, id):
+def safeg2b_login( pw:str, id):
+
+    if safeg2b_is_login():
+        return
+
     handle = safeg2b_main_window_wait_until()
     auto.windows.bring_window_to_top(handle)
 
@@ -75,7 +64,7 @@ def safeg2b_login(resmgr, pw:str, id):
     auto.windows.img_click(resmgr.get('safeg2b_finger_print_exception_confirm_button.png'), timeout=30)    
       
     # 4. 인증서 로그인
-    safeg2b_certificate_login(resmgr, pw)
+    safeg2b_certificate_login( pw)
 
     # 6. Waiting for the id page
     auto.windows.bring_window_to_top(handle)
@@ -87,23 +76,26 @@ def safeg2b_login(resmgr, pw:str, id):
     auto.windows.img_click(resmgr.get('safeg2b_id_confirm_button.png'), timeout=5)
     
     # 9. 인증서 로그인(개인)
-    safeg2b_certificate_login(resmgr, pw)
+    # market.certificate.cert_personal_user_login(pw)
+    safeg2b_certificate_login( pw)
 
     # 10. 메세지 확인 - 예외 적용자 로그인
-    safeg2b_window_message_confirm(resmgr)
+    safeg2b_window_message_confirm()
 
 # ---------------------------
 # Participation APIs
 # ---------------------------
 
-def safeg2b_participate_2_4_bid_participate(resmgr):
+def safeg2b_participate_2_4_bid_participate():
     auto.windows.window_select("물품공고분류조회 - SafeG2B")
     auto.windows.img_click(resmgr.get("safeg2b_2_4_bid_button.png"), timeout=5)
 
-def safeg2b_participate_2_5_bid_notice(resmgr):
+def safeg2b_participate_2_5_bid_notice():
     notice_hwnd = auto.windows.window_wait_until("투찰 공지사항 - SafeG2B")
     auto.windows.bring_window_to_top(notice_hwnd)
 
+    # After bring a window to top, It takes not niggrigible time. 
+    auto.windows.wait_until_image(resmgr.get("safeg2b_2_5_bid_notice_title_image.png"), timeout=5)
     pyautogui.press("end")
     auto.windows.wait_until_image(resmgr.get("safeg2b_2_5_bid_notice_yes_checkbox.png"), timeout=5)
     
@@ -113,7 +105,7 @@ def safeg2b_participate_2_5_bid_notice(resmgr):
 
     auto.windows.img_click(resmgr.get('safeg2b_2_5_bid_notice_confirm_button.png'))
 
-def safeg2b_participate_2_6_bid_doc(resmgr, price):
+def safeg2b_participate_2_6_bid_doc( price):
     hwnd = auto.windows.window_select("물품구매입찰서:나라장터 - SafeG2B")
 
     # click buttons
@@ -133,12 +125,12 @@ def safeg2b_participate_2_6_bid_doc(resmgr, price):
     auto.windows.img_click(resmgr.get("safeg2b_2_6_bid_doc_checkbox.png"), timeout=5)
     auto.windows.img_click(resmgr.get("safeg2b_2_6_bid_doc_send_button.png"))
 
-def safeg2b_participate_2_7_bid_price_confirmation(resmgr): 
+def safeg2b_participate_2_7_bid_price_confirmation(): 
     auto.windows.window_select("투찰금액 확인 - SafeG2B")
     auto.windows.img_click(resmgr.get('safeg2b_2_7_cost_confirm_checkbox.png'), timeout=5)
     auto.windows.img_click(resmgr.get('safeg2b_2_7_cost_confirm_button.png'))
 
-def safeg2b_participate_2_8_bid_lottery_number(resmgr):
+def safeg2b_participate_2_8_bid_lottery_number():
     # 추첨번호 선택
     auto.windows.window_select("추첨번호 선택 - SafeG2B")
 
@@ -153,26 +145,29 @@ def safeg2b_participate_2_8_bid_lottery_number(resmgr):
 
     # click buttons
     auto.windows.img_click(resmgr.get('safeg2b_2_8_lottery_number_send_button.png'))
+    # Issue: 아래 2개의 img가 비슷하여 2번 click되는 효과가 생긴다. 중간에 잠시 시간을 준다.
     auto.windows.img_click(resmgr.get('safeg2b_2_8_lottery_number_confirm_button.png'), timeout=5)
-    auto.windows.img_click(resmgr.get('safeg2b_2_8_lottery_number_certi_confrim_button.png'), timeout=5)
+    # TODO: 특징있는 image를 기다리도록 변경하자.
+    auto.windows.img_wait_until(resmgr.get('safeg2b_2_8_lottery_number_popup_characteristic.png'), timeout=5)
+    auto.windows.img_click(resmgr.get('safeg2b_2_8_lottery_number_certi_confrim_button.png'), confidence=0.8)
 
-def safeg2b_participate_2_9_certificate(resmgr, pw):
-    safeg2b_certificate_login(resmgr, pw)
+def safeg2b_participate_2_9_certificate( pw):
+    market.certificate.cert_personal_user_login( pw)
 
-def safeg2b_participate_2_10_alert_confirm(resmgr):
+def safeg2b_participate_2_10_alert_confirm():
     auto.windows.window_select("나라장터")
     auto.windows.img_click(resmgr.get('safeg2b_2_9_confirm_button.png'),timeout=5)
 
-def safeg2b_participate_2_11_history_check(resmgr):
+def safeg2b_participate_2_11_history_check():
     auto.windows.window_select("전자입찰 송수신상세이력조회 - SafeG2B")
     auto.windows.img_click(resmgr.get('safeg2b_2_10_close_button.png'), timeout=5)
 
-def safeg2b_participate_2_12_survery(resmgr):
+def safeg2b_participate_2_12_survery():
     # 2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B
     auto.windows.window_select("나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
     auto.windows.img_click(resmgr.get('safeg2b_2_11_survey_close_button.png'), timeout=5)
 
-def safeg2b_participate( resmgr, pw, notice_no, price):
+def safeg2b_participate(  pw, notice_no:str, price:str):
     handle = safeg2b_main_window_wait_until()
     auto.windows.bring_window_to_top(handle)
     
@@ -188,32 +183,38 @@ def safeg2b_participate( resmgr, pw, notice_no, price):
     auto.windows.img_click(resmgr.get("safeg2b_2_3_bid_finger_print_button.png"), timeout=30)
 
     print("2.4 bid participate(2)")
-    safeg2b_participate_2_4_bid_participate(resmgr)
+    safeg2b_participate_2_4_bid_participate()
 
     print("2.5 투찰 공지사항")
-    safeg2b_participate_2_5_bid_notice(resmgr)
+    safeg2b_participate_2_5_bid_notice()
 
     print("2.6 물품구매입찰서")
-    safeg2b_participate_2_6_bid_doc(resmgr, price)
+    safeg2b_participate_2_6_bid_doc( price)
 
     print("2.7 투찰금액확인")
-    safeg2b_participate_2_7_bid_price_confirmation(resmgr)
+    safeg2b_participate_2_7_bid_price_confirmation()
 
     print("2.8 추첨번호 선택")
-    safeg2b_participate_2_8_bid_lottery_number(resmgr)
+    safeg2b_participate_2_8_bid_lottery_number()
 
     print("2.9 인증서 ")
-    safeg2b_participate_2_9_certificate(resmgr, pw)
+    safeg2b_participate_2_9_certificate( pw)
 
     print("2.10 알림 확인")
-    safeg2b_participate_2_10_alert_confirm(resmgr)
+    safeg2b_participate_2_10_alert_confirm()
 
     print("2.11 전자입찰 송수신상세이력조회 - SafeG2B")
-    safeg2b_participate_2_11_history_check(resmgr)
+    safeg2b_participate_2_11_history_check()
 
     # Optional 
     # print("2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
-    # safeg2b_participate_2_12_survery(resmgr)
+    # safeg2b_participate_2_12_survery()
+
+def safeg2b_initialize():    
+    handle = safeg2b_main_window_wait_until()
+    auto.windows.bring_window_to_top(handle)
+
+    safeg2b_go_to_login_page()
 
 
 if __name__  == '__main__':
@@ -231,54 +232,14 @@ if __name__  == '__main__':
 
     print(f"pw={pw}, rn={resident_number}")
 
-
-    from incon_automatic_agent.res.resource_manager import resource_manager
-    resmgr = resource_manager()
-
     notice_number = "20220435053"
     price = "10083150"
 
-    # TODO: check window handle exsis, if not, download it.    
-
-    handle = safeg2b_main_window_wait_until()
-    auto.windows.bring_window_to_top(handle)
-
-    # timeout... just go to loging page if possible
-    safeg2b_go_to_login_page(resmgr)
-
-    if not safeg2b_is_login(resmgr):
-        safeg2b_login(resmgr, pw, resident_number)
+    safeg2b_initialize()
+    safeg2b_login( pw, resident_number)
 
     # TODO: Too fast to participate in
     time.sleep(5)
-    safeg2b_participate(resmgr, pw, notice_number, price)
+    safeg2b_participate( pw, notice_number, price)
 
-    # Normalize window size 
-    # safeg2b_make_window_size()
-
-    # Login
-    # safeg2b_login()
-  
-
-
-    # launch_safeg2b()
-    # handle = wait_until_safeg2b_handle(60)
-
-    # need to elevate
-    # from elevate import elevate
-    # elevate()
-
-    # print('before')
-    # print(win32gui.GetWindowRect(handle))
-
-    # 이상적인 size: (0,0, 1000, xxx)
-
-    
-
-    # x0, y0, x1, y1 = win32gui.GetWindowRect(handle)
-    # w = x1 - x0
-    # h = y1 - y0
-    # win32gui.MoveWindow(handle, x0, y0, w+100, h+100, True)
-
-    # print('after')
-    # print(win32gui.GetWindowRect(handle))
+   

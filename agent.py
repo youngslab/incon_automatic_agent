@@ -9,20 +9,28 @@ from data.incon import Incon
 from market.g2b import G2B
 from bot.discord import Discord
 
+from res.resource_manager import resource_manager as resmgr
+
 settings_enable_pres = True
 settings_enable_bids = True
 
-def create_data_provider(account):
+def create_data_provider():
     # create incon object
-    return Incon(account['id'], account['pw'])
+    id = resmgr.get_account("incon","id")
+    pw = resmgr.get_account("incon","pw")
+    return Incon(id, pw)
 
-def create_markets(account) -> dict:
+def create_markets() -> dict:
     markets = dict()       
-    markets['나라장터'] = G2B(account['pw'])
+    pw = resmgr.get_account("g2b","pw")
+    rn = resmgr.get_account("g2b","rn")
+    markets['나라장터'] = G2B(pw, rn)
     return markets
 
-def create_notifier(account):
-    return DiscordLogger(account["token"], account['channel_id'])
+def create_notifier():
+    token = resmgr.get_account("discord","token")
+    channel_id = resmgr.get_account("discord","channel_id")
+    return DiscordLogger(token, channel_id)
     
 def discord_get_char_emoji(ch):
     return ":regional_indicator_{}:".format(ch)
@@ -73,14 +81,6 @@ async def print_line_break(notifier):
     await notifier.send("---------------------------------")
 
 
-def iaa_get_accounts():
-    import os, json
-    path = os.path.dirname(os.path.abspath(__file__))
-    filepath = os.path.join(path, ".accounts.json")
-    with open(filepath, 'r')  as f:
-        return json.loads(f.read())
-
-
 class DiscordLogger(Discord):
     def __init__(self, token, channel_id):
         self.__token = token
@@ -94,17 +94,16 @@ class DiscordLogger(Discord):
 
 
 async def main():
-    accounts = iaa_get_accounts()
 
     try:
-        notifier = create_notifier(accounts['discord'])
+        notifier = create_notifier()
         await notifier.start()
         await notifier.send(discord_format_title("Start Incon Automatic Navigation Agent"))
         await print_line_break(notifier)     
 
 
-        dp = create_data_provider(accounts['incon'])
-        ms = create_markets(accounts['g2b'])
+        dp = create_data_provider()
+        ms = create_markets()
 
 
         if settings_enable_pres:            
