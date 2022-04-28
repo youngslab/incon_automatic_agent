@@ -1,5 +1,6 @@
 
-import sys
+import sys, random
+
 import auto.selenium
 from selenium.webdriver.common.by import By
 
@@ -29,7 +30,14 @@ def incon_login(driver, id, pw):
         return False
     
     submit_btn = (By.ID, 'submit')
-    return auto.selenium.click(driver, submit_btn)
+    success = auto.selenium.click(driver, submit_btn)
+    if not success:
+        return False
+
+    # wait until its url changes
+    dest = 'https://chodal.in-con.biz/bidmobile/msg/list.do'
+    return auto.selenium.wait_until_webpage(driver, dest)
+
 
     
 
@@ -176,8 +184,8 @@ class Preregistration:
 # ---------------------
 # Biding
 # ---------------------
-
-def incon_bid_go_page(driver):
+from selenium.webdriver.edge.webdriver import WebDriver
+def incon_bid_go_page(driver:WebDriver):
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/bid/list.do')
 
 def incon_bid_listitem_is_activated(listitem):
@@ -194,9 +202,14 @@ def incon_bid_listitem_activate(webdriver, webelement):
 
 def incon_bid_get_listitem(webdriver, idx):
     return webdriver.find_element(By.XPATH, f'//*[@id="bid_list"]/li[{idx + 1}]')
-
+ 
 def incon_bid_get_listitems(webdriver):
-    return webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
+    # check one item which has been shown
+    locator = (By.XPATH, '//*[@id="bid_list"]/li')
+    item = auto.selenium.find_element_until(webdriver, locator , timeout=5)
+    if item == None:
+        raise Exception(f"Need to check current pages. {webdriver.current_url}")
+    return webdriver.find_elements(*locator)
 
 def incon_bid_activate_all(webdriver):
     items = incon_bid_get_listitems(webdriver)
@@ -267,6 +280,7 @@ def incon_bid_listitem_has_price(listitem) -> bool:
     else:
         return False
 
+
 def incon_bid_listitem_price(webdriver, listitem) -> bool:
     # page moved.
     incon_listitem_click(webdriver, listitem)
@@ -279,9 +293,18 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     # input percentage
     input = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="point"]'))
     min =  webdriver.find_element(By.XPATH, '//*[@id="sRange"]') 
+    min = float(min.text)
     max =  webdriver.find_element(By.XPATH, '//*[@id="eRange"]') 
-    target = float(min.text) + float(max.text)
-    target = target / 2
+    max = float(max.text)
+
+    # 4 decimal places    
+    target = round(random.uniform(min, max), 4)
+
+    print(f"incon) randomly select price rate. rate={target}, min={min}, max={max}")
+    # BE CAREFUL: Target should be in the range from min to max.
+    if target < min or target > max:
+        raise Exception(f"Price Rate is out of bound. rate={target}, min={min}, max={max}")
+
     auto.selenium.send_keys_element(webdriver, input, f"{target}")
 
     save_button = webdriver.find_element(By.XPATH,'//*[@id="detail-page"]/div[2]/a')
@@ -293,6 +316,8 @@ def incon_bid_price_all(webdriver):
     for idx in range(counts):
         item = incon_bid_get_listitem(webdriver, idx)
         if not incon_bid_listitem_has_price(item):
+            temp = Bid(webdriver, item)
+            print(f"incon) price the bid item. {temp.number}, {temp.title}")
             incon_bid_listitem_price(webdriver, item)
 
 class Bid:
@@ -335,12 +360,12 @@ def incon_get_pres(webdriver) -> list[Preregistration]:
     items = incon_pre_get_listitems(webdriver)
     return [ Preregistration(webdriver, item) for item in items ]
 
-def incon_get_bids(webdriver) -> list[Bid]:
+def incon_get_bids(webdriver) -> list[Bid]:    
     print("incon) go to the bid list page")
     incon_bid_go_page(webdriver)
 
     # cleanup 
-    print("incon) activate all items")
+    print("incon) activate all bid items")
     incon_bid_activate_all(webdriver)
 
     print("incon) price all items")
@@ -372,22 +397,15 @@ class Incon:
 # ---------------------
 # Test
 # ---------------------
-def load_settings():
-    import os
-    path = os.path.dirname(os.path.abspath(__file__))
-    settings = os.path.join(path, ".incon.json")
-
-    import json
-    with open(settings, 'r')  as f:
-        x = json.loads(f.read())
-        return x['id'], x['pw']
-
 if __name__ == "__main__":
-    id, pw = load_settings()
+    from incon_automatic_agent.res.resource_manager import resource_manager as resmgr    
+    id = resmgr.get_account("incon","id")
+    pw = resmgr.get_account("incon","pw")
+
     ic = Incon(id, pw)
-    pres = ic.get_pre_data()
-    for pre in pres:
-        print(pre)
+    # pres = ic.get_pre_data()
+    # for pre in pres:
+    #     print(pre)
 
     bids = ic.get_bid_data()
     for bid in bids:
