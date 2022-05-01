@@ -283,11 +283,17 @@ def incon_bid_listitem_has_price(listitem) -> bool:
 
 def incon_bid_listitem_price(webdriver, listitem) -> bool:
     # page moved.
-    incon_listitem_click(webdriver, listitem)
+    success = incon_listitem_click(webdriver, listitem)
+    if not success:
+        print("incon) failed to click bid listitem.")
+        return False
 
     # detail page
     price_button = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]'))
-    auto.selenium.click_element(webdriver, price_button)
+    success = auto.selenium.click_element(webdriver, price_button)
+    if not success:
+        print("incon) failed to click price_button.")
+        return False
 
     # Input page
     # input percentage
@@ -305,10 +311,18 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     if target < min or target > max:
         raise Exception(f"Price Rate is out of bound. rate={target}, min={min}, max={max}")
 
-    auto.selenium.send_keys_element(webdriver, input, f"{target}")
+    success = auto.selenium.send_keys_element(webdriver, input, f"{target}")
+    if not success:
+        print("incon) failed to type price.")
+        return False
 
     save_button = webdriver.find_element(By.XPATH,'//*[@id="detail-page"]/div[2]/a')
-    auto.selenium.click_element(webdriver, save_button)
+    success = auto.selenium.click_element(webdriver, save_button)
+    if not success:
+        print("incon) failed to click save_button.")
+        return False
+
+    return True
 
 def incon_bid_price_all(webdriver):
     items = incon_bid_get_listitems(webdriver)
