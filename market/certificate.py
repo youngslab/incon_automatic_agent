@@ -2,7 +2,7 @@
 
 from multiprocessing.connection import wait
 from auto.windows import *
-from incon_automatic_agent.res.resource_manager import resource_manager as resmgr
+from res.resource_manager import resource_manager as resmgr
 
 def cert_login(pw:str) -> bool:
     cert_hwnd = window_wait_until("인증서 선택", timeout=30)

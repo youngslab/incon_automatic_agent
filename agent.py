@@ -15,7 +15,7 @@ def create_data_provider():
     # create incon object
     id = resmgr.get_account("incon","id")
     pw = resmgr.get_account("incon","pw")
-    return Incon(id, pw)
+    return Incon(id, pw, headless=False)
 
 def create_markets() -> dict:
     markets = dict()       
@@ -98,13 +98,13 @@ async def main():
         await notifier.send(discord_format_title("Start Incon Automatic Navigation Agent"))
         await print_line_break(notifier)     
 
-
         dp = create_data_provider()
         ms = create_markets()
 
-
-        if settings_enable_pres:            
-            pres = dp.get_pre_data()        
+        if settings_enable_pres:
+            await notifier.send(discord_format_subtitle("Pre Stage"))                  
+            await print_line_break(notifier)
+            pres = dp.get_pre_data()
             for pre in pres:
                 market = ms.get(pre.market)
                 if not market:                    
@@ -118,15 +118,20 @@ async def main():
                     time.sleep(0.1)
                     if not pre.is_completed():
                         raise Exception(f"agent) Clicked But Not Completed {pre.number}")
+                    await notifier.send(discord_format_pre(pre))      
                     print(f"agent) Registered {pre.number} - {pre.title} ")
 
+            await print_line_break(notifier)
             # Report Current Status
-            await notifier.send(discord_format_subtitle("Pre Stage"))
-            await print_line_break(notifier)
-            await notifier.send(discord_format_pres(pres))
-            await print_line_break(notifier)
+            # 
+            # await print_line_break(notifier)
+            # await notifier.send(discord_format_pres(pres))
+            # await print_line_break(notifier)
 
-        if settings_enable_bids:                
+        if settings_enable_bids:     
+            await notifier.send(discord_format_subtitle("Bid Stage"))
+            await print_line_break(notifier)
+                       
             bids = dp.get_bid_data()
             for bid in bids:                
                 market = ms.get(bid.market)
@@ -142,16 +147,12 @@ async def main():
                 success, message = market.participate(bid)
                 if success:                    
                     bid.complete()
+                    await notifier.send(discord_format_bid(bid))
                     print(f"agent) Registered {bid.number} - {bid.title} ")
                 else:
                     print(f"agent) Can not participate in {bid.number}, {bid.title} - {message}")
-            
-            # Report Current Status
-            await notifier.send(discord_format_subtitle("Bid Stage"))
-            await print_line_break(notifier)
-            await notifier.send(discord_format_bids(bids))
-            await print_line_break(notifier)
 
+            await print_line_break(notifier)
         
     except Exception as e:        
         await notifier.send(str(e))

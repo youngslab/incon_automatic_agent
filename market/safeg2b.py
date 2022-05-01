@@ -217,6 +217,11 @@ def safeg2b_initialize():
     safeg2b_go_to_login_page()
 
 
+def safeg2b_close() -> bool:
+    title = safeg2b_get_window_title()
+    hwnd = auto.windows.window_find_exact(title)    
+    return auto.windows.window_close(hwnd)
+
 if __name__  == '__main__':
 
     # load account info of the Incon

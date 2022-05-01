@@ -125,9 +125,10 @@ def g2b_register(driver, pns):
 
 
 class G2B:
-    def __init__(self, pw, rn):
-        self.__driver = auto.selenium.create_edge_driver()
+    def __init__(self, pw, rn, close_windows=True, headless=True):
+        self.__driver = auto.selenium.create_edge_driver(headless=headless)
         self.__pw = pw
+        self.__close_windows=close_windows
         go_homepage(self.__driver)
         login(self.__driver, pw)
         self.__driver.minimize_window()
@@ -137,7 +138,11 @@ class G2B:
         safeg2b_initialize()
         safeg2b_login(pw, rn)
 
-    
+    def __del__(self):
+        if self.__close_windows:
+            safeg2b_close()
+            self.__driver.close()
+            
     def __register(self, pns):        
         return g2b_register(self.__driver, pns)
             
@@ -153,3 +158,18 @@ class G2B:
             return False, "safeg2b instance is not running"
         safeg2b_participate(self.__pw, bid.number, str(bid.price))
         return True, None
+
+
+if __name__ == "__main__":
+    
+    pw = resmgr.get_account("g2b", "pw")
+    rn = resmgr.get_account("g2b", "rn")
+    obj = G2B(pw, rn)
+
+
+    # Test Register Pre
+    class TestPre:
+        def __init__(self):
+            self.number = "1017150101"        
+
+    obj.register(TestPre())

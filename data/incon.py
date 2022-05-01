@@ -286,7 +286,7 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     incon_listitem_click(webdriver, listitem)
 
     # detail page
-    price_button = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]')) 
+    price_button = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]'))
     auto.selenium.click_element(webdriver, price_button)
 
     # Input page
@@ -378,8 +378,8 @@ def incon_get_bids(webdriver) -> list[Bid]:
 
 # STATE MACHINE
 class Incon:
-    def __init__(self, id, pw):
-        self.driver = auto.selenium.create_edge_driver()
+    def __init__(self, id, pw, headless=True):
+        self.driver = auto.selenium.create_edge_driver(headless=headless)
         incon_go_homepage(self.driver)
         incon_login(self.driver, id, pw)
 
@@ -392,20 +392,18 @@ class Incon:
     def get_bid_data(self):
         return incon_get_bids(self.driver)
 
-
-
 # ---------------------
 # Test
 # ---------------------
 if __name__ == "__main__":
-    from incon_automatic_agent.res.resource_manager import resource_manager as resmgr    
+    from res.resource_manager import resource_manager as resmgr    
     id = resmgr.get_account("incon","id")
     pw = resmgr.get_account("incon","pw")
 
     ic = Incon(id, pw)
-    # pres = ic.get_pre_data()
-    # for pre in pres:
-    #     print(pre)
+    pres = ic.get_pre_data()
+    for pre in pres:
+        print(pre)
 
     bids = ic.get_bid_data()
     for bid in bids:
