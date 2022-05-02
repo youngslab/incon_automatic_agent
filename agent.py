@@ -154,7 +154,7 @@ async def main():
 
             await print_line_break(notifier)
         
-    except Exception as e:        
+    except Exception as e:
         await notifier.send(str(e))
         traceback.print_exception(*sys.exc_info())
 
