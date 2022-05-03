@@ -126,6 +126,7 @@ def g2b_register(driver, pns):
 
 class G2B:
     def __init__(self, pw, rn, close_windows=True, headless=True):
+        print("g2b) __init__")
         self.__driver = auto.selenium.create_edge_driver(headless=headless)
         self.__pw = pw
         self.__close_windows=close_windows
@@ -139,6 +140,7 @@ class G2B:
         safeg2b_login(pw, rn)
 
     def __del__(self):
+        print("g2b) __del__")
         if self.__close_windows:
             safeg2b_close()
             self.__driver.close()
@@ -168,8 +170,8 @@ if __name__ == "__main__":
 
 
     # Test Register Pre
-    class TestPre:
-        def __init__(self):
-            self.number = "1017150101"        
+    # class TestPre:
+    #     def __init__(self):
+    #         self.number = "1017150101"        
 
-    obj.register(TestPre())
+    # obj.register(TestPre())

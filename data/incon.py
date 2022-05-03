@@ -393,12 +393,14 @@ def incon_get_bids(webdriver) -> list[Bid]:
 # STATE MACHINE
 class Incon:
     def __init__(self, id, pw, headless=True):
+        self.driver = None
         self.driver = auto.selenium.create_edge_driver(headless=headless)
         incon_go_homepage(self.driver)
         incon_login(self.driver, id, pw)
 
     def __del__(self):
-        self.driver.close()
+        if self.driver:
+            self.driver.close()
         
     def get_pre_data(self):
         return incon_get_pres(self.driver)
