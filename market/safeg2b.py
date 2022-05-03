@@ -10,7 +10,7 @@ from res.resource_manager import resource_manager as resmgr
 def safeg2b_get_window_title():
     return "나라장터: 국가종합전자조달 - SafeG2B"
 
-def safeg2b_main_window_wait_until(timeout=60):
+def safeg2b_get_main_window_until(timeout=60):
     window_title = safeg2b_get_window_title()
     return auto.windows.window_wait_until(window_title, timeout=timeout)
 
@@ -51,7 +51,7 @@ def safeg2b_login( pw:str, id):
     if safeg2b_is_login():
         return
 
-    handle = safeg2b_main_window_wait_until()
+    handle = safeg2b_get_main_window_until()
     auto.windows.bring_window_to_top(handle)
 
     # 1. check box
@@ -168,7 +168,7 @@ def safeg2b_participate_2_12_survery():
     auto.windows.img_click(resmgr.get('safeg2b_2_11_survey_close_button.png'), timeout=5)
 
 def safeg2b_participate(  pw, notice_no:str, price:str):
-    handle = safeg2b_main_window_wait_until()
+    handle = safeg2b_get_main_window_until()
     auto.windows.bring_window_to_top(handle)
     
     print("2.1 bid_info (New Page)")
@@ -211,7 +211,7 @@ def safeg2b_participate(  pw, notice_no:str, price:str):
     # safeg2b_participate_2_12_survery()
 
 def safeg2b_initialize():    
-    handle = safeg2b_main_window_wait_until()
+    handle = safeg2b_get_main_window_until()
     auto.windows.bring_window_to_top(handle)
 
     safeg2b_go_to_login_page()
@@ -219,7 +219,8 @@ def safeg2b_initialize():
 
 def safeg2b_close() -> bool:
     title = safeg2b_get_window_title()
-    hwnd = auto.windows.window_find_exact(title)    
+    hwnd = auto.windows.window_find_exact(title)
+    print(f"safeg2b) close window={hwnd}")
     return auto.windows.window_close(hwnd)
 
 if __name__  == '__main__':
