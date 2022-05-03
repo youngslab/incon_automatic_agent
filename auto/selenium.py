@@ -43,7 +43,7 @@ def wait_unttil_window(driver, title:str, timeout=3):
     wait = WebDriverWait(driver, timeout)
     return wait.until(lambda x: get_window_handle(x, title), f"Can not find a window({title})")
     
-def wait_until_webpage(driver, url:str, timeout=3):
+def wait_until_webpage(driver, url:str, timeout=10):
     wait = WebDriverWait(driver, timeout)
     return wait.until(lambda x: x.current_url == url, f"Can not reach to ({url})")
 
