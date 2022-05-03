@@ -65,18 +65,28 @@ def find_element_until(driver, locator, timeout=2):
     except:
         return None
         
-def click_element(driver, e):
-    driver.execute_script("arguments[0].click();", e)
-    driver.implicitly_wait(1)
+  
+def click_element(driver, e) -> bool:
+    try:
+        driver.execute_script("arguments[0].click();", e)
+        driver.implicitly_wait(1)
+    except Exception as e:
+        print(f"selenium) Failed to execute click script. reason={e}")
+        return False
     return True
 
-def click(driver, locator):
+def click(driver, locator) -> bool:
     elem = find_element_until(driver, locator)
     if not elem:
         return False
      
-    driver.execute_script("arguments[0].click();", elem)
-    driver.implicitly_wait(1)
+    try:
+        driver.execute_script("arguments[0].click();", elem)
+        driver.implicitly_wait(1)
+    except Exception as e:
+        print(f"selenium) Failed to execute click script. reason={e}")
+        return False
+
     return True
 
 def send_keys(driver, locator, text):
