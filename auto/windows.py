@@ -241,7 +241,7 @@ def window_select(title:str, timeout = 60):
 
 def window_close(hwnd) -> bool:
   try:
-    win32gui.PostMessage(11, win32con.WM_CLOSE, 0, 0)
+    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
   except win32api.error as e:
     print(f"window) Failed to close a window handle({hwnd}), reason: {e}")
     return False  
