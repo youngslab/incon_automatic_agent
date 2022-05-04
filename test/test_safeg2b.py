@@ -2,8 +2,8 @@
 from unittest import TestCase, main
 import time 
 
-from market.safeg2b_execution import *
-from market.safeg2b import *
+from org.g2b.safeg2b_execution import *
+from org.g2b.safeg2b import *
 
 class SafeG2BExcecutionTestCase(TestCase):
 

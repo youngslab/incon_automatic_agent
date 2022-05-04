@@ -1,15 +1,48 @@
-
+import elevate
+import ctypes
 import os, sys, time, random
+import subprocess
 import auto.windows
 import pyautogui
 import win32gui, win32con, win32api, win32process
 
-import market.certificate
+import org.g2b.certificate
 from res.resource_manager import resource_manager as resmgr
 
 def __logger():
     import logging
     return logging.getLogger(__name__)
+
+#-------------------------------
+# Execution APIs
+#-------------------------------
+def safeg2b_get_exe_filename():
+    return "G2BLauncher.exe"
+
+def safeg2b_get_exe_directory():
+    return "C:\\WINDOWS\\pps\\SafeG2B"
+
+def safeg2b_is_running():
+    
+    ss = str(subprocess.check_output('tasklist', shell=True))
+    filename = safeg2b_get_exe_filename()
+    return filename in ss
+
+def safeg2b_run():
+    if safeg2b_is_running():
+        __logger().info("SafeG2B is already running")
+        return
+
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        __logger().info("Need privileged permission. Elevate.")
+        elevate.elevate(show_console=False)    
+
+    filename = safeg2b_get_exe_filename()
+    directory = safeg2b_get_exe_directory()
+    __logger().info("Start SafeG2B.")
+    os.system(f"cd {directory} && start {os.path.join(directory, filename)}") 
+
+#-------------------------------
 
 def safeg2b_get_window_title():
     return "나라장터: 국가종합전자조달 - SafeG2B"
@@ -48,7 +81,7 @@ def safeg2b_is_login():
     return True if pos is None else False
 
 def safeg2b_certificate_login( pw):    
-    market.certificate.cert_login( pw)
+    org.g2b.certificate.cert_login( pw)
  
 def safeg2b_login( pw:str, id):
     if safeg2b_is_login():
@@ -162,7 +195,7 @@ def safeg2b_participate_2_8_bid_lottery_number():
     auto.windows.img_click(resmgr.get('safeg2b_2_8_lottery_number_certi_confrim_button.png'), confidence=0.8)
 
 def safeg2b_participate_2_9_certificate( pw):
-    market.certificate.cert_personal_user_login( pw)
+    org.g2b.certificate.cert_personal_user_login( pw)
 
 def safeg2b_participate_2_10_alert_confirm():
     auto.windows.window_select("나라장터")

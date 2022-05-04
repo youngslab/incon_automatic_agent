@@ -2,7 +2,7 @@
 import sys, time, os
 import traceback
 from org.incon import Incon
-from market.g2b import G2B
+from org.g2b.g2b import G2B
 
 from res.resource_manager import resource_manager as resmgr
 
