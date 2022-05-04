@@ -100,6 +100,7 @@ def send_keys(driver, locator, text):
 def send_keys_element(driver, elem, text):
     elem.send_keys(text)
     driver.implicitly_wait(1)
+    return True
 
 def go(driver, page):
     driver.get(page)
