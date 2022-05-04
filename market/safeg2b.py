@@ -7,6 +7,10 @@ import win32gui, win32con, win32api, win32process
 import market.certificate
 from res.resource_manager import resource_manager as resmgr
 
+def __logger():
+    import logging
+    return logging.getLogger(__name__)
+
 def safeg2b_get_window_title():
     return "나라장터: 국가종합전자조달 - SafeG2B"
 
@@ -47,28 +51,32 @@ def safeg2b_certificate_login( pw):
     market.certificate.cert_login( pw)
  
 def safeg2b_login( pw:str, id):
-
     if safeg2b_is_login():
+        __logger().info("Already logged in.")
         return
 
     handle = safeg2b_get_main_window_until()
     auto.windows.bring_window_to_top(handle)
 
     # 1. check box
+    __logger().info("1.1 지문 예외 check box ")
     auto.windows.img_click(resmgr.get('safeg2b_finger_print_exception_checkbox.png'), timeout=10)
     
     # 2. login button
+    __logger().info("1.2 로그인 버튼 ")
     auto.windows.img_click(resmgr.get('safeg2b_login_btn.png'))
 
     # 3. waiting for the page movement and then click
-    auto.windows.img_click(resmgr.get('safeg2b_finger_print_exception_confirm_button.png'), timeout=30)    
+    __logger().info("1.3 지문 예외 확인 ")
+    auto.windows.img_click(resmgr.get('safeg2b_finger_print_exception_confirm_button.png'), timeout=30)
       
     # 4. 인증서 로그인
+    __logger().info("1.4 인증서 로그인")
     safeg2b_certificate_login( pw)
 
+    __logger().info("1.5 주민번호 입력")
     # 6. Waiting for the id page
     auto.windows.bring_window_to_top(handle)
-
     # 7. Focus input for id and type
     auto.windows.img_type(resmgr.get('safeg2b_id_front_number_input.png'), f"{id.split('-')[0]}{id.split('-')[1]}" , timeout=30)
     # when second part got focused automatically, the image going to be changed so that it is hightlighted.
@@ -77,9 +85,11 @@ def safeg2b_login( pw:str, id):
     
     # 9. 인증서 로그인(개인)
     # market.certificate.cert_personal_user_login(pw)
+    __logger().info("1.6 인증서 로그인")
     safeg2b_certificate_login( pw)
 
     # 10. 메세지 확인 - 예외 적용자 로그인
+    __logger().info("1.7 메세지 확인 - 예외 적용자 로그인")
     safeg2b_window_message_confirm()
 
 # ---------------------------
@@ -171,43 +181,43 @@ def safeg2b_participate(  pw, notice_no:str, price:str):
     handle = safeg2b_get_main_window_until()
     auto.windows.bring_window_to_top(handle)
     
-    print("2.1 bid_info (New Page)")
+    __logger().info("2.1 bid_info (New Page)")
     auto.windows.img_click(resmgr.get('safeg2b_bid_bid_info_button.png'), timeout=30)
 
-    print("2.2 search ")
+    __logger().info("2.2 search ")
     auto.windows.img_type(resmgr.get('safeg2b_bid_search_input.png'), notice_no, timeout=30)
     auto.windows.img_click(resmgr.get('safeg2b_bid_search_button.png'), timeout=5)
 
-    print("2.3 bid participate")
+    __logger().info("2.3 bid participate")
     auto.windows.bring_window_to_top(handle)
     auto.windows.img_click(resmgr.get("safeg2b_2_3_bid_finger_print_button.png"), timeout=30)
 
-    print("2.4 bid participate(2)")
+    __logger().info("2.4 bid participate(2)")
     safeg2b_participate_2_4_bid_participate()
 
-    print("2.5 투찰 공지사항")
+    __logger().info("2.5 투찰 공지사항")
     safeg2b_participate_2_5_bid_notice()
 
-    print("2.6 물품구매입찰서")
+    __logger().info("2.6 물품구매입찰서")
     safeg2b_participate_2_6_bid_doc( price)
 
-    print("2.7 투찰금액확인")
+    __logger().info("2.7 투찰금액확인")
     safeg2b_participate_2_7_bid_price_confirmation()
 
-    print("2.8 추첨번호 선택")
+    __logger().info("2.8 추첨번호 선택")
     safeg2b_participate_2_8_bid_lottery_number()
 
-    print("2.9 인증서 ")
+    __logger().info("2.9 인증서 ")
     safeg2b_participate_2_9_certificate( pw)
 
-    print("2.10 알림 확인")
+    __logger().info("2.10 알림 확인")
     safeg2b_participate_2_10_alert_confirm()
 
-    print("2.11 전자입찰 송수신상세이력조회 - SafeG2B")
+    __logger().info("2.11 전자입찰 송수신상세이력조회 - SafeG2B")
     safeg2b_participate_2_11_history_check()
 
     # Optional 
-    # print("2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
+    # __logger().info("2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
     # safeg2b_participate_2_12_survery()
 
 def safeg2b_initialize():    
@@ -220,7 +230,7 @@ def safeg2b_initialize():
 def safeg2b_close() -> bool:
     title = safeg2b_get_window_title()
     hwnd = auto.windows.window_find_exact(title)
-    print(f"safeg2b) close window={hwnd}")
+    __logger().info(f"Close SafeG2B window={hwnd}")
     return auto.windows.window_close(hwnd)
 
 if __name__  == '__main__':
