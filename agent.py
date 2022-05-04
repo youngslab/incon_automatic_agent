@@ -1,7 +1,7 @@
 
 import sys, time, os
 import traceback
-from data.incon import Incon
+from org.incon import Incon
 from market.g2b import G2B
 
 from res.resource_manager import resource_manager as resmgr
@@ -71,7 +71,7 @@ def iaa_get_default_logger_config():
         'disable_existing_loggers': False,
         "formatters": { 
             "standard": { 
-                "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+                "format": "%(asctime)s [%(levelname).1s] %(name)s: %(message)s"
             }
         },  
         'loggers': {
@@ -87,7 +87,7 @@ def create_data_provider():
     # create incon object
     id = resmgr.get_account("incon","id")
     pw = resmgr.get_account("incon","pw")
-    return Incon(id, pw, headless=False)
+    return Incon(id, pw)
 
 def create_markets() -> dict:
     markets = dict()       
@@ -114,47 +114,54 @@ def main():
             logger.info("Start pre market business.")
             pres = dp.get_pre_data()
             for pre in pres:
+                logger.info(f"Try to register pre. pre={pre}")
                 market = ms.get(pre.market)
                 if not market:
-                    logger.debug(f"market({pre.market}) is not supported.")
+                    logger.info(f"Skip. Market is not supported. ")
                     continue
 
                 if pre.is_completed():
-                    logger.debug(f"pre({pre.number}) has already been completed.")
+                    logger.info(f"Skip. Already completed.")
                     continue
 
                 success = market.register(pre)
                 if not success:
-                    logger.error(f"failed to register a pre({pre.number}).")
+                    logger.error(f"Failed to register a pre.")
                     continue
-
+                
                 pre.complete()
                 time.sleep(0.1)
                 if not pre.is_completed():
-                    raise Exception(f"agent) Clicked But Not Completed {pre.number}")
-                logger.info(f"agent) Registered {pre.number} - {pre.title} ")
+                    raise Exception(f"Clicked But Not Completed.")
+
+                logger.info(f"Registered.")
 
         if settings_enable_bids:     
             logger.info("Start bid market business.")
             bids = dp.get_bid_data()
             for bid in bids:                
+                logger.info(f"Try to register bid. bid={bid}")
                 market = ms.get(bid.market)
                 if not market:
+                    logger.info(f"Skip. Market is not supported.")
                     continue
 
                 if bid.is_completed():
+                    logger.info(f"Skip. Already completed.")
                     continue
 
                 if not bid.is_ready:
+                    logger.info(f"Skip. Not ready.")
                     continue
 
                 success, message = market.participate(bid)
 
                 if not success:
-                    logger.warning(f"agent) Can not participate in {bid.number}, {bid.title} - {message}")
+                    logger.warning(f"Failed to register. message={message}")
+                    continue
 
                 bid.complete()
-                logger.info(f"agent) Registered {bid.number} - {bid.title} ")
+                logger.info(f"Registered.")
 
     except Exception as e:        
         traceback.print_exception(*sys.exc_info())
