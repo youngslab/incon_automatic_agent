@@ -9,6 +9,10 @@ from res.resource_manager import resource_manager
 from market.safeg2b import *
 from market.safeg2b_execution import *
 
+def logger():
+    import logging
+    return logging.getLogger(__name__)
+
 def _go_mypage(driver):
     mypage = 'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do'
     driver.get(mypage)
@@ -23,14 +27,14 @@ def _edit_mypage(driver):
 def _open_item_find_window(driver):    
     with auto.selenium.Frame(driver, (By.ID, 'sub')):
         with auto.selenium.Frame(driver, (By.NAME, 'main')):
-            print("g2b) click item find button")
+            logger().info("click item find button")
             search_btn = (By.XPATH, '//*[@id="frm_addProd"]/div[3]/table/tbody/tr/td[1]/div/button')
             return auto.selenium.click(driver, search_btn)
 
 def _find_product(driver, pn):
     with auto.selenium.Window(driver, "[팝업] 세부품명찾기: 나라장터"):
 
-        print(f"g2b) type a product number={pn}")
+        logger().info(f"type a product number={pn}")
         pn_input = (By.ID, 'detailPrdnmNo')
         auto.selenium.send_keys(driver, pn_input, pn)
 
@@ -45,19 +49,19 @@ def _register_product(driver):
     with auto.selenium.Frame(driver, (By.ID, 'sub')):
         with auto.selenium.Frame(driver, (By.NAME, 'main')):
             register_btn = (By.XPATH,'//*[@id="frm_addProd"]/div[2]/a')
-            print("g2b) click register button")
+            logger().info("click register button")
             success = auto.selenium.click(driver, register_btn)
             if not success:
                 return False
 
             alert = auto.selenium.wait_until_alert(driver)
             alert.accept()
-            print(f"g2b) Accepted alert.")
+            logger().info(f"Accepted alert.")
     
     with auto.selenium.Window(driver, "Message: 나라장터"):
         confirm_btn = ( By.XPATH, '//*[@id="container3"]/div[2]/div/a')
         success = auto.selenium.click(driver, confirm_btn)
-        print(f"g2b) click confirm button.")
+        logger().info(f"click confirm button.")
 
 
 # Go to the homepage to login
@@ -115,10 +119,10 @@ def g2b_register(driver, pns):
     registered_pns = get_registered_products(driver)
     for pn in pns:
         if pn in registered_pns:
-            print(f"g2b) {pn} is already registered.")
+            logger().info(f"{pn} is already registered.")
             continue
         register_product(driver, pn)
-        print(f"g2b) {pn} is registered.")
+        logger().info(f"{pn} is registered.")
     return True
 
 
@@ -126,7 +130,7 @@ def g2b_register(driver, pns):
 
 class G2B:
     def __init__(self, pw, rn, close_windows=True, headless=True):
-        print("g2b) __init__")
+        logger().debug("__init__")
         self.__driver = auto.selenium.create_edge_driver(headless=headless)
         self.__pw = pw
         self.__close_windows=close_windows
@@ -140,7 +144,7 @@ class G2B:
         safeg2b_login(pw, rn)
 
     def __del__(self):
-        print("g2b) __del__")
+        logger().debug("__del__")
         if self.__close_windows:
             safeg2b_close()
             self.__driver.close()
@@ -154,7 +158,7 @@ class G2B:
         return self.__register(product_numbers)
 
     def participate(self, bid):        
-        print(f"g2b) participate in {bid.number} price={bid.price}")
+        logger().info(f"participate in {bid.number} price={bid.price}")
         self.__driver.minimize_window()
         if not safeg2b_is_running():
             return False, "safeg2b instance is not running"

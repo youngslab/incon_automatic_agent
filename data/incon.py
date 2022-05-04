@@ -14,6 +14,10 @@ from selenium.webdriver.common.by import By
 # Incon Login Page
 # ---------------------
 
+def __logger():
+    import logging
+    return logging.getLogger(__name__)
+
 # Incon Homepage
 def incon_go_homepage(driver):
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/login.jsp')
@@ -53,7 +57,7 @@ def incon_listitem_is_completed(listitem):
     return 'ui-icon-check' in completion_button.get_attribute("class")
 
 def incon_listitem_complete(driver, listitem):
-    print("incon) click listitem completion button")
+    print("click listitem completion button")
     completion_button = incon_listitem_get_button(listitem)
     return auto.selenium.click_element(driver, completion_button)
 
@@ -71,8 +75,8 @@ def incon_popup_is_open(webdriver):
     popup_layer = (By.ID, 'layer_popup')
     elem = auto.selenium.find_element_until(webdriver, popup_layer, 10)
     if not elem:
-        raise Exception("incon) Can not find layer_popup in this page")
-    # try to find "display:none" in style
+        raise Exception("Can not find layer_popup in this page")
+    # try to find "display:none"in style
     return elem.get_attribute('style').find('display') < 0
 
 # Click the popup close button.
@@ -174,7 +178,7 @@ class Preregistration:
         return incon_listitem_is_completed(self.__element)
         
     def complete(self):
-        print("incon) pre) click item completion")
+        __logger().info("pre) click item completion")
         return incon_listitem_complete(self.__driver, self.__element)
 
     def __str__(self):
@@ -285,14 +289,14 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     # page moved.
     success = incon_listitem_click(webdriver, listitem)
     if not success:
-        print("incon) failed to click bid listitem.")
+        __logger().warning("failed to click bid listitem.")
         return False
 
     # detail page
     price_button = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]'))
     success = auto.selenium.click_element(webdriver, price_button)
     if not success:
-        print("incon) failed to click price_button.")
+        __logger().warning("failed to click price_button.")
         return False
 
     # Input page
@@ -306,20 +310,20 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     # 4 decimal places    
     target = round(random.uniform(min, max), 4)
 
-    print(f"incon) randomly select price rate. rate={target}, min={min}, max={max}")
+    __logger().info(f"randomly select price rate. rate={target}, min={min}, max={max}")
     # BE CAREFUL: Target should be in the range from min to max.
     if target < min or target > max:
         raise Exception(f"Price Rate is out of bound. rate={target}, min={min}, max={max}")
 
     success = auto.selenium.send_keys_element(webdriver, input, f"{target}")
     if not success:
-        print("incon) failed to type price.")
+        __logger().warning("failed to type price.")
         return False
 
     save_button = webdriver.find_element(By.XPATH,'//*[@id="detail-page"]/div[2]/a')
     success = auto.selenium.click_element(webdriver, save_button)
     if not success:
-        print("incon) failed to click save_button.")
+        __logger().warning("failed to click save_button.")
         return False
 
     return True
@@ -331,7 +335,7 @@ def incon_bid_price_all(webdriver):
         item = incon_bid_get_listitem(webdriver, idx)
         if not incon_bid_listitem_has_price(item):
             temp = Bid(webdriver, item)
-            print(f"incon) price the bid item. {temp.number}, {temp.title}")
+            __logger().info(f"price the bid item. {temp.number}, {temp.title}")
             incon_bid_listitem_price(webdriver, item)
 
 class Bid:
@@ -360,33 +364,33 @@ class Bid:
 # ---------------------
 
 def incon_get_pres(webdriver) -> list[Preregistration]:
-    print("incon) go to the preregistration list page")
+    __logger().info("go to the preregistration list page")
     incon_pre_go_page(webdriver)
 
     # cleanup
-    print("incon) close popup")
+    __logger().info("close popup")
     incon_pre_close_popup(webdriver)
-    print("incon) activate all items")
+    __logger().info("activate all items")
     incon_pre_listitem_activate_all(webdriver)
 
     # convert 
-    print("incon) create items of Pre class")
+    __logger().info("create items of Pre class")
     items = incon_pre_get_listitems(webdriver)
     return [ Preregistration(webdriver, item) for item in items ]
 
 def incon_get_bids(webdriver) -> list[Bid]:    
-    print("incon) go to the bid list page")
+    __logger().info("go to the bid list page")
     incon_bid_go_page(webdriver)
 
     # cleanup 
-    print("incon) activate all bid items")
+    __logger().info("activate all bid items")
     incon_bid_activate_all(webdriver)
 
-    print("incon) price all items")
+    __logger().info("price all items")
     incon_bid_price_all(webdriver)
 
     # convert
-    print("incon) create items of Bid")
+    __logger().info("create items of Bid")
     items = incon_bid_get_listitems(webdriver)
     return [Bid(webdriver, item) for item in items]
 
