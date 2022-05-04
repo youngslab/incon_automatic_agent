@@ -14,7 +14,9 @@ from selenium import webdriver
 from selenium.webdriver.edge.service import Service
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
-
+def __logger():
+    import logging
+    return logging.getLogger(__name__)
 
 # options.add_argument('headless')
     # options.add_argument('disable-gpu')    
@@ -31,7 +33,10 @@ def create_edge_driver(headless=False):
         options.add_argument('headless')
         options.add_argument('disable-gpu')    
         
-    return webdriver.Edge(options=options, service=Service(EdgeChromiumDriverManager().install()))
+    service = Service(EdgeChromiumDriverManager().install())
+    import time
+    time.sleep(1)
+    return webdriver.Edge(options=options, service=service)
 
 
 # Return an alert object
@@ -71,7 +76,7 @@ def click_element(driver, e) -> bool:
         driver.execute_script("arguments[0].click();", e)
         driver.implicitly_wait(1)
     except Exception as e:
-        print(f"selenium) Failed to execute click script. reason={e}")
+        __logger().error(f"selenium) Failed to execute click script. reason={e}")
         return False
     return True
 
@@ -84,7 +89,7 @@ def click(driver, locator) -> bool:
         driver.execute_script("arguments[0].click();", elem)
         driver.implicitly_wait(1)
     except Exception as e:
-        print(f"selenium) Failed to execute click script. reason={e}")
+        __logger().error(f"selenium) Failed to execute click script. reason={e}")
         return False
 
     return True
@@ -110,12 +115,12 @@ def go(driver, page):
 # WINDOW(TAB) API
 
 def get_window_handle(driver, title):
-    # print("get_window_handle - title={}".format(driver.title))
+    # __logger().info(("get_window_handle - title={}".format(driver.title))
     current = driver.current_window_handle
     result = None
     for handle in driver.window_handles:
         driver.switch_to.window(handle)
-        # print(driver.title)
+        # __logger().info((driver.title)
         if title == driver.title:
             result = handle
             break
@@ -171,7 +176,7 @@ class Window:
                 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.driver.switch_to.window(self.prev_window_handle)
-        # print("exited: {}".format(self.driver.title))
+        # __logger().info(("exited: {}".format(self.driver.title))
 
 
 

@@ -1,6 +1,11 @@
-import time
+import time, os
 import win32gui, win32con, win32api, win32process, winerror
 import pynput, pyautogui
+
+def __logger():
+    import logging
+    return logging.getLogger(__name__)
+
 
 def find_window_handle(text):
     return win32gui.FindWindow(None, text)
@@ -15,7 +20,7 @@ def wait_until_image(img, timeout=5, grayscale=True):
   while pyautogui.locateCenterOnScreen(img, grayscale=grayscale) is None and timeout > 0:
     timeout = timeout - 0.5    
     time.sleep(0.5)
-  print(f"{img} found. Time left:{timeout} , position: {pyautogui.locateCenterOnScreen(img)}")
+  __logger().debug(f"{img} found. Time left:{timeout} , position: {pyautogui.locateCenterOnScreen(img)}")
   return pyautogui.locateCenterOnScreen(img)
 
 
@@ -93,7 +98,7 @@ def wait_until(func, timeout=10, interval=0.5):
       return res
       
     curr = time.time() - start
-    # print(f"wait_until) curr={curr:.4f}")
+    # __logger().info((f"wait_until) curr={curr:.4f}")
 
     if curr > timeout:
       break
@@ -101,7 +106,7 @@ def wait_until(func, timeout=10, interval=0.5):
     # every 500ms
     time.sleep(interval)
   
-  print(f"wait_until) It takes {curr}. timeout={timeout}, interval={interval}")
+  __logger().info(f"wait_until takes {curr}. timeout={timeout}, interval={interval}")
   return res
     
 # --------------------------
@@ -135,7 +140,6 @@ def img_find(img, grayscale=True, confidence=.9):
   return pyautogui.locateCenterOnScreen(img, grayscale=grayscale, confidence=confidence)
 
 def img_find_all(img, grayscale=True, confidence=.9):
-  print( "find all image")  
   ps = pyautogui.locateAllOnScreen(img, grayscale=grayscale, confidence=confidence)  
   
   # exclude multiple area
@@ -158,7 +162,7 @@ def img_wait_until(img, timeout=0.1, grayscale=True, confidence=.9):
   return wait_until(lambda : img_find(img,grayscale=grayscale, confidence=confidence), timeout=timeout)
 
 def img_click(img, timeout=0.1, grayscale=True, confidence=.9):
-  print(f"img) try to click {img}")
+  __logger().debug(f"Click {os.path.basename(img)}")
   center = img_wait_until(img, timeout=timeout, grayscale=grayscale, confidence=confidence)  
   if center is None:
     raise Exception(f"Can not find {img}")
@@ -181,7 +185,7 @@ def img_test(img):
     if center is not None:
       break
   
-  print(f"img_test) center={center}, confidence={confidence}, img={img}")
+  __logger().info(f"img_test) center={center}, confidence={confidence}, img={img}")
   if center is not None:
     mouse_move(*center)
 
@@ -206,7 +210,7 @@ def window_find_exact(title:str):
     return win32gui.FindWindow(None, title)
 
 def window_wait_until(title:str, timeout=10):
-  print(f"window) try to find {title}")
+  __logger().debug(f"Find a window. title={title}")
   return wait_until(lambda: win32gui.FindWindow(None, title), timeout)
 
 def window_find_first(title:str):
@@ -227,7 +231,7 @@ def window_scroll(hwnd, dx, dy):
   
   # Get a center point.
   center = window_get_center(hwnd)
-  print(center[0], center[1] )
+  __logger().info(center[0], center[1] )
   
 
   pyautogui.scroll(dy, x=center[0], y=center[1])
@@ -243,7 +247,7 @@ def window_close(hwnd) -> bool:
   try:
     win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
   except win32api.error as e:
-    print(f"window) Failed to close a window handle({hwnd}), reason: {e}")
+    __logger().error(f"Failed to close a window. handle={hwnd}, reason={e}")
     return False  
   return True
 
@@ -253,7 +257,7 @@ def test_window_close(window_title):
 
 if __name__ == '__main__':  
   success = window_close("더블스틸")
-  print(success)
+  # __logger().info(success)
   
     
 
