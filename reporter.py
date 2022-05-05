@@ -1,6 +1,7 @@
 
 from bot.discord import Discord
-from res.resource_manager import resource_manager as resmgr
+
+from account import *
 
 def discord_get_char_emoji(ch):
     return ":regional_indicator_{}:".format(ch)
@@ -64,7 +65,7 @@ class DiscordLogger(Discord):
 
 
 def create_notifier():
-    token = resmgr.get_account("discord","token")
-    channel_id = resmgr.get_account("discord","channel_id")
+    token = account_get("discord","token")
+    channel_id = account_get("discord","channel_id")
     return DiscordLogger(token, channel_id)
     

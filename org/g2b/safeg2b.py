@@ -7,7 +7,7 @@ import pyautogui
 import win32gui, win32con, win32api, win32process
 
 import org.g2b.certificate
-from res.resource_manager import resource_manager as resmgr
+from org.g2b.res import resmgr
 
 def __logger():
     import logging
@@ -267,25 +267,15 @@ def safeg2b_close() -> bool:
     return auto.windows.window_close(hwnd)
 
 if __name__  == '__main__':
-
-    # load account info of the Incon
-    pw = ''
-    resident_number = ''
-    import json
-    path = os.path.dirname(os.path.abspath(__file__))
-    filepath = os.path.join(path, ".g2b.json")
-    with open(filepath, 'r')  as f:
-        x = json.loads(f.read())
-        pw = x['pw']
-        resident_number = x['rn']
-
-    print(f"pw={pw}, rn={resident_number}")
+    from account import account_get
+    pw = account_get("g2b", "pw")
+    rn = account_get("g2b", "rn")
 
     notice_number = "20220435053"
     price = "10083150"
 
     safeg2b_initialize()
-    safeg2b_login( pw, resident_number)
+    safeg2b_login( pw, rn)
 
     # TODO: Too fast to participate in
     time.sleep(5)

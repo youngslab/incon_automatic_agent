@@ -414,9 +414,9 @@ class Incon:
 # Test
 # ---------------------
 if __name__ == "__main__":
-    from res.resource_manager import resource_manager as resmgr    
-    id = resmgr.get_account("incon","id")
-    pw = resmgr.get_account("incon","pw")
+    from account import account_get
+    id = account_get("incon","id")
+    pw = account_get("incon","pw")
 
     ic = Incon(id, pw)
     pres = ic.get_pre_data()
