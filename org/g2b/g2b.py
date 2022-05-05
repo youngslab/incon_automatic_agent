@@ -1,13 +1,8 @@
 
-import sys, time
 from selenium.webdriver.common.by import By
 import auto.selenium, auto.windows
 
-
-from res.resource_manager import resource_manager
-
-from market.safeg2b import *
-from market.safeg2b_execution import *
+from org.g2b.safeg2b import *
 
 def logger():
     import logging
@@ -79,8 +74,8 @@ def login(driver, password):
             return False
     
     # try to login with certificate
-    import market.certificate
-    return market.certificate.cert_login(password)
+    import org.g2b.certificate
+    return org.g2b.certificate.cert_login(password)
 
     
 
@@ -167,11 +162,10 @@ class G2B:
 
 
 if __name__ == "__main__":
-    
-    pw = resmgr.get_account("g2b", "pw")
-    rn = resmgr.get_account("g2b", "rn")
+    from account import account_get
+    pw = account_get("g2b", "pw")
+    rn = account_get("g2b", "rn")
     obj = G2B(pw, rn)
-
 
     # Test Register Pre
     # class TestPre:

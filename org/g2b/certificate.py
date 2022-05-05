@@ -2,7 +2,8 @@
 
 from multiprocessing.connection import wait
 from auto.windows import *
-from res.resource_manager import resource_manager as resmgr
+
+from org.g2b.res import resmgr
 
 def cert_login(pw:str) -> bool:
     cert_hwnd = window_wait_until("인증서 선택", timeout=30)
