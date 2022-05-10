@@ -91,23 +91,23 @@ def safeg2b_login( pw:str, id):
     handle = safeg2b_get_main_window_until()
     auto.windows.bring_window_to_top(handle)
 
-    # 1. check box
-    __logger().info("1.1 지문 예외 check box ")
+    # login)  check box
+    __logger().info("login) 1. 지문 예외 check box ")
     auto.windows.img_click(resmgr.get('safeg2b_finger_print_exception_checkbox.png'), timeout=10)
     
     # 2. login button
-    __logger().info("1.2 로그인 버튼 ")
+    __logger().info("login) 2. 로그인 버튼 ")
     auto.windows.img_click(resmgr.get('safeg2b_login_btn.png'))
 
     # 3. waiting for the page movement and then click
-    __logger().info("1.3 지문 예외 확인 ")
+    __logger().info("login) 3. 지문 예외 확인 ")
     auto.windows.img_click(resmgr.get('safeg2b_finger_print_exception_confirm_button.png'), timeout=30)
       
     # 4. 인증서 로그인
-    __logger().info("1.4 인증서 로그인")
+    __logger().info("login) 4. 인증서 로그인")
     safeg2b_certificate_login( pw)
 
-    __logger().info("1.5 주민번호 입력")
+    __logger().info("login) 5. 주민번호 입력")
     # 6. Waiting for the id page
     auto.windows.bring_window_to_top(handle)
     # 7. Focus input for id and type
@@ -118,12 +118,18 @@ def safeg2b_login( pw:str, id):
     
     # 9. 인증서 로그인(개인)
     # market.certificate.cert_personal_user_login(pw)
-    __logger().info("1.6 인증서 로그인")
+    __logger().info("login) 6. 인증서 로그인")
     safeg2b_certificate_login( pw)
 
     # 10. 메세지 확인 - 예외 적용자 로그인
-    __logger().info("1.7 메세지 확인 - 예외 적용자 로그인")
+    __logger().info("login) 7. 메세지 확인 - 예외 적용자 로그인")
     safeg2b_window_message_confirm()
+
+    __logger().info("login) 8. 로그인 확인 - MY BID CENTER")
+    success = safeg2b_login_validate()  
+    if not success:
+        __logger().error("Failed to login safeg2b")
+    return success
 
 # ---------------------------
 # Participation APIs
@@ -266,19 +272,32 @@ def safeg2b_close() -> bool:
     __logger().info(f"Close SafeG2B window={hwnd}")
     return auto.windows.window_close(hwnd)
 
+def safeg2b_login_validate():
+    pos = auto.windows.img_wait_until(resmgr.get("safeg2b_login_my_bid_center.png"), timeout=5)
+    return False if pos is None else True
+
+def safeg2b_get_window_handle(timeout=60):
+    title = safeg2b_get_window_title()
+    return auto.windows.wait_until_window_handle(title,timeout=timeout)
+
+def test_validate_login():
+    hwnd = safeg2b_get_window_handle()
+    auto.windows.bring_window_to_top(hwnd)
+    print(safeg2b_login_validate())
+
 if __name__  == '__main__':
-    from account import account_get
-    pw = account_get("g2b", "pw")
-    rn = account_get("g2b", "rn")
+    # from account import account_get
+    # pw = account_get("g2b", "pw")
+    # rn = account_get("g2b", "rn")
 
-    notice_number = "20220435053"
-    price = "10083150"
+    # notice_number = "20220435053"
+    # price = "10083150"
 
-    safeg2b_initialize()
-    safeg2b_login( pw, rn)
+    # safeg2b_initialize()
+    # safeg2b_login( pw, rn)
 
-    # TODO: Too fast to participate in
-    time.sleep(5)
-    safeg2b_participate( pw, notice_number, price)
+    # # TODO: Too fast to participate in
+    # time.sleep(5)
+    # safeg2b_participate( pw, notice_number, price)
 
-   
+    test_validate_login()

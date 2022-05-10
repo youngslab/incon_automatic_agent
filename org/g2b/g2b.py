@@ -136,7 +136,9 @@ class G2B:
         # safe g2b
         safeg2b_run()
         safeg2b_initialize()
-        safeg2b_login(pw, rn)
+        success = safeg2b_login(pw, rn)
+        if not success:
+            raise Exception("Failed to login to safeg2b")
 
     def __del__(self):
         logger().debug("__del__")
