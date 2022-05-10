@@ -125,6 +125,12 @@ def safeg2b_login( pw:str, id):
     __logger().info("1.7 메세지 확인 - 예외 적용자 로그인")
     safeg2b_window_message_confirm()
 
+    __logger().info("1.8 로그인 확인 - MY BID CENTER")
+    success = safeg2b_login_validate()  
+    if not success:
+        __logger().error("Failed to login safeg2b")
+    return success
+
 # ---------------------------
 # Participation APIs
 # ---------------------------
@@ -266,19 +272,32 @@ def safeg2b_close() -> bool:
     __logger().info(f"Close SafeG2B window={hwnd}")
     return auto.windows.window_close(hwnd)
 
+def safeg2b_login_validate():
+    pos = auto.windows.img_wait_until(resmgr.get("safeg2b_login_my_bid_center.png"), timeout=5)
+    return False if pos is None else True
+
+def safeg2b_get_window_handle(timeout=60):
+    title = safeg2b_get_window_title()
+    return auto.windows.wait_until_window_handle(title,timeout=timeout)
+
+def test_validate_login():
+    hwnd = safeg2b_get_window_handle()
+    auto.windows.bring_window_to_top(hwnd)
+    print(safeg2b_login_validate())
+
 if __name__  == '__main__':
-    from account import account_get
-    pw = account_get("g2b", "pw")
-    rn = account_get("g2b", "rn")
+    # from account import account_get
+    # pw = account_get("g2b", "pw")
+    # rn = account_get("g2b", "rn")
 
-    notice_number = "20220435053"
-    price = "10083150"
+    # notice_number = "20220435053"
+    # price = "10083150"
 
-    safeg2b_initialize()
-    safeg2b_login( pw, rn)
+    # safeg2b_initialize()
+    # safeg2b_login( pw, rn)
 
-    # TODO: Too fast to participate in
-    time.sleep(5)
-    safeg2b_participate( pw, notice_number, price)
+    # # TODO: Too fast to participate in
+    # time.sleep(5)
+    # safeg2b_participate( pw, notice_number, price)
 
-   
+    test_validate_login()
