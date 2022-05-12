@@ -1,5 +1,7 @@
 
-import random, logging
+from selenium.webdriver.edge.webdriver import WebDriver
+import random
+import logging
 
 import auto.selenium
 from selenium.webdriver.common.by import By
@@ -9,29 +11,32 @@ from selenium.webdriver.common.by import By
 # ---------------------
 
 
-
 # ---------------------
 # Incon Login Page
 # ---------------------
 
-def logger():
+def log():
     return logging.getLogger(__package__)
 
 # Incon Homepage
+
+
 def incon_go_homepage(driver):
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/login.jsp')
 
 # Condition
 # - Should be at the homepage
 # - Mobile page: mepno, meppw
+
+
 def incon_login(driver, id, pw):
     id_input = (By.ID, 'mepno')
     pw_input = (By.ID, 'meppw')
     success = auto.selenium.send_keys(driver, id_input, id) \
-            | auto.selenium.send_keys(driver, pw_input, pw)
+        | auto.selenium.send_keys(driver, pw_input, pw)
     if not success:
         return False
-    
+
     submit_btn = (By.ID, 'submit')
     success = auto.selenium.click(driver, submit_btn)
     if not success:
@@ -42,8 +47,6 @@ def incon_login(driver, id, pw):
     return auto.selenium.wait_until_webpage(driver, dest)
 
 
-    
-
 # ---------------------
 # List Item
 # ---------------------
@@ -51,13 +54,16 @@ def incon_login(driver, id, pw):
 def incon_listitem_get_button(listitem):
     return listitem.find_element(By.XPATH, './/a[2]')
 
+
 def incon_listitem_is_completed(listitem):
     completion_button = incon_listitem_get_button(listitem)
     return 'ui-icon-check' in completion_button.get_attribute("class")
 
+
 def incon_listitem_complete(driver, listitem):
     completion_button = incon_listitem_get_button(listitem)
     return auto.selenium.click_element(driver, completion_button)
+
 
 def incon_listitem_click(driver, listitem):
     body = listitem.find_element(By.XPATH, './/a[1]')
@@ -69,7 +75,7 @@ def incon_listitem_click(driver, listitem):
 # ---------------------
 
 # Check the popup is opened
-def incon_popup_is_open(webdriver):    
+def incon_popup_is_open(webdriver):
     popup_layer = (By.ID, 'layer_popup')
     elem = auto.selenium.find_element_until(webdriver, popup_layer, 10)
     if not elem:
@@ -78,12 +84,16 @@ def incon_popup_is_open(webdriver):
     return elem.get_attribute('style').find('display') < 0
 
 # Click the popup close button.
+
+
 def incon_popup_close(webdriver):
     close_btn = (By.XPATH, '//*[@id="close"]/a')
     elem = auto.selenium.find_element_until(webdriver, close_btn)
     auto.selenium.click_element(webdriver, elem)
 
-# Click 
+# Click
+
+
 def incon_popup_check_do_not_open_today(webdriver):
     todaycloseyn = (By.ID, 'todaycloseyn')
     elem = auto.selenium.find_element_until(webdriver, todaycloseyn)
@@ -95,38 +105,40 @@ def incon_popup_check_do_not_open_today(webdriver):
 # ---------------------
 
 def incon_pre_go_page(driver):
-    auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/msg/list.do')    
+    auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/msg/list.do')
 
-def incon_pre_close_popup(webdriver): 
+
+def incon_pre_close_popup(webdriver):
     if incon_popup_is_open(webdriver):
         incon_popup_check_do_not_open_today(webdriver)
         incon_popup_close(webdriver)
 
 
-def incon_pre_listitem_is_activated(webelement) -> bool:
-    # Condtion
-    # 1. If it doesn't contain "<p id='hideXXX>", then it's active
-    # 2. If "<p id='hideXXX>" is not visible, then it's active
-    ps = webelement.find_elements(By.XPATH, \
-        './/a[1]/p[contains(@id, "hide") and not(contains(@style, "display"))]')
-    if len(ps) == 0:
-        return True
-    else:
-        return False
-
-# Can fail? 
-def incon_pre_listitem_activate(webdriver, webelement):
-    elem = webelement.find_element(By.XPATH, './/a[1]')    
-    auto.selenium.click_element(webdriver, elem)
-    
 def incon_pre_get_listitems(webdriver):
     return webdriver.find_elements(By.XPATH, '//*[@id="demo-page"]/div[2]/ul/li')
 
+
 def incon_pre_listitem_activate_all(webdriver):
-    es = incon_pre_get_listitems(webdriver)
-    for e in es:
-        if not incon_pre_listitem_is_activated(e):
-            incon_pre_listitem_activate(webdriver, e)
+    xs = webdriver.find_elements(
+        By.XPATH, f'//*[@id="demo-page"]/div[2]/ul/li/a[1]/p')
+    for x in xs:
+        # get id
+        id = x.get_attribute("id")
+        if not id:
+            continue
+        if id.find("hide") < 0:
+            continue
+        log().debug("activate) found <p id=\"hidexxxx\"> element.")
+        style = x.get_attribute("style")
+        if style.find("display") >= 0:  # display:none
+            log().debug("activate) skip <p id=\"hidexxxx\"> element. It's hidden")
+            continue
+
+        # 이걸 click해도 되나?
+        # 이전까지는 .//a[1]을 현재는 .//a[1]/p를 click 하는 것이다.
+        log().debug("activate) activate pre item.")
+        auto.selenium.click_element(webdriver, x)
+
 
 def incon_pre_listitem_get_data(webelement):
     res = dict()
@@ -138,7 +150,6 @@ def incon_pre_listitem_get_data(webelement):
         else:
             res[token[:sep].strip()] = token[sep+1:].strip()
     return res
-
 
 
 class Preregistration:
@@ -157,7 +168,7 @@ class Preregistration:
         elif self.__data.get("공고번호"):
             return self.__data.get("공고번호")
         raise Exception(f"Not found Notice Numboer: {self.__data}")
-    
+
     def __get_title(self):
         if self.__data.get("세부품명"):
             return self.__data.get("세부품명")
@@ -174,9 +185,9 @@ class Preregistration:
 
     def is_completed(self):
         return incon_listitem_is_completed(self.__element)
-        
+
     def complete(self):
-        logger().info("click item completion")
+        log().info("click item completion")
         return incon_listitem_complete(self.__driver, self.__element)
 
     def __str__(self):
@@ -186,38 +197,59 @@ class Preregistration:
 # ---------------------
 # Biding
 # ---------------------
-from selenium.webdriver.edge.webdriver import WebDriver
-def incon_bid_go_page(driver:WebDriver):
+def incon_bid_go_page(driver: WebDriver):
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/bid/list.do')
 
-def incon_bid_listitem_is_activated(listitem):
-    items = listitem.find_elements(By.XPATH, \
-        './/a[1]/h2[contains(@id, "first") and not(contains(@style,"display"))]')
-    if len(items) == 0:
-        return True
-    else:
-        return False
 
-def incon_bid_listitem_activate(webdriver, webelement):
-    elem = webelement.find_element(By.XPATH, './/a[1]')    
-    auto.selenium.click_element(webdriver, elem)
+def incon_bid_listitem_is_activated(listitem):
+    # items = listitem.find_elements(By.XPATH, \
+    #     './/a[1]/h2[contains(@id, "first") and not(contains(@style,"display"))]')
+    # if len(items) == 0:
+    #     return True
+    # else:
+    # return False
+    try:
+        elem = listitem.find_element(By.CSS_SELECTOR, 'h2[id^="first"]')
+        style = elem.get_attribute("style")
+        if style.find("display") >= 0:
+            return True
+    except Exception:
+        return True
+
+    return False
+
 
 def incon_bid_get_listitem(webdriver, idx):
     return webdriver.find_element(By.XPATH, f'//*[@id="bid_list"]/li[{idx + 1}]')
- 
+
+
 def incon_bid_get_listitems(webdriver):
     # check one item which has been shown
     locator = (By.XPATH, '//*[@id="bid_list"]/li')
-    item = auto.selenium.find_element_until(webdriver, locator , timeout=5)
+    item = auto.selenium.find_element_until(webdriver, locator, timeout=5)
     if item == None:
-        raise Exception(f"Need to check current pages. {webdriver.current_url}")
+        raise Exception(
+            f"Need to check current pages. {webdriver.current_url}")
     return webdriver.find_elements(*locator)
 
+
 def incon_bid_activate_all(webdriver):
-    items = incon_bid_get_listitems(webdriver)
-    for item in items:
-        if not incon_bid_listitem_is_activated(item):
-            incon_bid_listitem_activate(webdriver, item)
+    xs = webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li/a[1]/h2')
+    for x in xs:
+        # get id
+        id = x.get_attribute("id")
+        if not id:
+            continue
+        if id.find("first") < 0:
+            continue
+        log().debug("activate) found <h2 id=\"firstxxxx\"> element.")
+        style = x.get_attribute("style")
+        if style.find("display") >= 0:  # display:none
+            log().debug("activate) skip <h2 id=\"firstxxxx\"> element. It's hidden")
+            continue
+        log().debug("activate) activate bid item.")
+        auto.selenium.click_element(webdriver, x)
+
 
 def incon_bid_listitem_get_data(listitem):
     res = dict()
@@ -229,6 +261,7 @@ def incon_bid_listitem_get_data(listitem):
         else:
             res[token[:sep].strip()] = token[sep+1:].strip()
     return res
+
 
 def incon_bid_listitem_get_market(listitem):
     market_img = listitem.find_element(By.XPATH, './/a[1]/img[1]')
@@ -260,13 +293,15 @@ def incon_bid_listitem_get_market(listitem):
         return "철도공사"
     elif img_src.find("bid_title_icon14.png") >= 0:
         return "석유공사"
-    else :
+    else:
         raise Exception(f"Unkown market of {img_src}")
+
 
 def incon_bid_listitem_is_ready(listitem) -> bool:
     status_img = listitem.find_element(By.XPATH, './/a[1]/img[2]')
     status_src = status_img.get_attribute('src')
     return status_src.find("ing.png") >= 0
+
 
 def incon_bid_listitem_get_price(listitem) -> int:
     price = listitem.find_element(By.XPATH, './/a[1]/div/font')
@@ -275,6 +310,7 @@ def incon_bid_listitem_get_price(listitem) -> int:
         return int(numbers)
     else:
         return 0
+
 
 def incon_bid_listitem_has_price(listitem) -> bool:
     if incon_bid_listitem_get_price(listitem) > 0:
@@ -287,54 +323,63 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     # page moved.
     success = incon_listitem_click(webdriver, listitem)
     if not success:
-        logger().warning("failed to click bid listitem.")
+        log().warning("failed to click bid listitem.")
         return False
 
     # detail page
-    price_button = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]'))
+    price_button = auto.selenium.find_element_until(
+        webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]'))
     success = auto.selenium.click_element(webdriver, price_button)
     if not success:
-        logger().warning("failed to click price_button.")
+        log().warning("failed to click price_button.")
         return False
 
     # Input page
     # input percentage
-    input = auto.selenium.find_element_until(webdriver, (By.XPATH, '//*[@id="point"]'))
-    min =  webdriver.find_element(By.XPATH, '//*[@id="sRange"]') 
+    input = auto.selenium.find_element_until(
+        webdriver, (By.XPATH, '//*[@id="point"]'))
+    min = webdriver.find_element(By.XPATH, '//*[@id="sRange"]')
     min = float(min.text)
-    max =  webdriver.find_element(By.XPATH, '//*[@id="eRange"]') 
+    max = webdriver.find_element(By.XPATH, '//*[@id="eRange"]')
     max = float(max.text)
 
-    # 4 decimal places    
+    # 4 decimal places
     target = round(random.uniform(min, max), 4)
 
-    logger().info(f"randomly select price rate. rate={target}, min={min}, max={max}")
+    log().info(
+        f"randomly select price rate. rate={target}, min={min}, max={max}")
     # BE CAREFUL: Target should be in the range from min to max.
     if target < min or target > max:
-        raise Exception(f"Price Rate is out of bound. rate={target}, min={min}, max={max}")
+        raise Exception(
+            f"Price Rate is out of bound. rate={target}, min={min}, max={max}")
 
     success = auto.selenium.send_keys_element(webdriver, input, f"{target}")
     if not success:
-        logger().warning("failed to type price.")
+        log().warning("failed to type price.")
         return False
 
-    save_button = webdriver.find_element(By.XPATH,'//*[@id="detail-page"]/div[2]/a')
+    save_button = webdriver.find_element(
+        By.XPATH, '//*[@id="detail-page"]/div[2]/a')
     success = auto.selenium.click_element(webdriver, save_button)
     if not success:
-        logger().warning("failed to click save_button.")
+        log().warning("failed to click save_button.")
         return False
 
     return True
 
+
 def incon_bid_price_all(webdriver):
     items = incon_bid_get_listitems(webdriver)
+    log().debug(f"pricing) get all bid items. len={len(items)}")
     counts = len(items)
     for idx in range(counts):
         item = incon_bid_get_listitem(webdriver, idx)
         if not incon_bid_listitem_has_price(item):
             temp = Bid(webdriver, item)
-            logger().info(f"price the bid item. {temp.number}, {temp.title}")
+            log().info(
+                f"pricing) price the bid item. idx={idx}, nubmer={temp.number}, title={temp.title}")
             incon_bid_listitem_price(webdriver, item)
+
 
 class Bid:
     def __init__(self, webdriver, listitem):
@@ -345,7 +390,7 @@ class Bid:
         self.number = self.__data['공고번호']
         self.deadline = self.__data['입찰마감']
         self.market = incon_bid_listitem_get_market(self.__listitem)
-        self.is_ready = incon_bid_listitem_is_ready(self.__listitem)        
+        self.is_ready = incon_bid_listitem_is_ready(self.__listitem)
         self.price = incon_bid_listitem_get_price(self.__listitem)
 
     def __str__(self):
@@ -361,38 +406,42 @@ class Bid:
 # Incon
 # ---------------------
 
+
 def incon_get_pres(webdriver) -> list[Preregistration]:
-    logger().info("go to the preregistration list page")
+    log().info("go to the preregistration list page")
     incon_pre_go_page(webdriver)
 
     # cleanup
-    logger().info("close popup")
+    log().info("close popup")
     incon_pre_close_popup(webdriver)
-    logger().info("activate all items")
+    log().info("activate all items")
     incon_pre_listitem_activate_all(webdriver)
 
-    # convert 
-    logger().info("create items of Pre class")
+    # convert
+    log().info("create items of Pre class")
     items = incon_pre_get_listitems(webdriver)
-    return [ Preregistration(webdriver, item) for item in items ]
+    return [Preregistration(webdriver, item) for item in items]
 
-def incon_get_bids(webdriver) -> list[Bid]:    
-    logger().info("go to the bid list page")
+
+def incon_get_bids(webdriver) -> list[Bid]:
+    log().info("go to the bid list page")
     incon_bid_go_page(webdriver)
 
-    # cleanup 
-    logger().info("activate all bid items")
+    # cleanup
+    log().info("activate all bid items")
     incon_bid_activate_all(webdriver)
 
-    logger().info("price all items")
+    log().info("price all items")
     incon_bid_price_all(webdriver)
 
     # convert
-    logger().info("create items of Bid")
+    log().info("create items of Bid")
     items = incon_bid_get_listitems(webdriver)
     return [Bid(webdriver, item) for item in items]
 
 # STATE MACHINE
+
+
 class Incon:
     def __init__(self, id, pw, headless=True):
         self.driver = None
@@ -403,26 +452,42 @@ class Incon:
     def __del__(self):
         if self.driver:
             self.driver.close()
-        
+
     def get_pre_data(self):
         return incon_get_pres(self.driver)
 
     def get_bid_data(self):
         return incon_get_bids(self.driver)
 
+
+def test_execution_time():
+    from account import account_get
+    id = account_get("incon", "id")
+    pw = account_get("incon", "pw")
+
+    ic = Incon(id, pw)
+
+    import time
+    start = time.time()
+    pres = ic.get_pre_data()
+    end = time.time()
+    print(f"getting pre items takes {end - start}")
+    for pre in pres:
+        print(pre)
+
+    start = time.time()
+    bids = ic.get_bid_data()
+    end = time.time()
+    print(f"getting pre items takes {end - start}")
+    for bid in bids:
+        print(bid)
+
+
 # ---------------------
 # Test
 # ---------------------
 if __name__ == "__main__":
-    from account import account_get
-    id = account_get("incon","id")
-    pw = account_get("incon","pw")
+    import logger
+    logger.logger_init()
 
-    ic = Incon(id, pw)
-    pres = ic.get_pre_data()
-    for pre in pres:
-        print(pre)
-
-    bids = ic.get_bid_data()
-    for bid in bids:
-        print(bid)
+    test_execution_time()
