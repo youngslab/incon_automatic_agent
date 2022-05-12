@@ -105,6 +105,6 @@ if __name__ == "__main__":
 
     try:
         main()
-    except Exception as e: 
+    except Exception as e:
         traceback.print_exception(*sys.exc_info())
         log().error(e)
