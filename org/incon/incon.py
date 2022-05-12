@@ -373,12 +373,24 @@ def incon_bid_price_all(webdriver):
     log().debug(f"pricing) get all bid items. len={len(items)}")
     counts = len(items)
     for idx in range(counts):
-        item = incon_bid_get_listitem(webdriver, idx)
-        if not incon_bid_listitem_has_price(item):
+        priced = False
+        retry = 0
+        while retry < 2:
+            item = incon_bid_get_listitem(webdriver, idx)
+            if incon_bid_listitem_has_price(item):
+                log().info(
+                    f"pricing) The bid was priced. idx={idx}, retry={retry}")
+                priced = True
+                break
+            retry = retry + 1
             temp = Bid(webdriver, item)
             log().info(
-                f"pricing) price the bid item. idx={idx}, nubmer={temp.number}, title={temp.title}")
+                f"pricing) price the bid item. idx={idx}, retry={retry}, nubmer={temp.number}, title={temp.title}")
             incon_bid_listitem_price(webdriver, item)
+
+        if not priced:
+            log().error(
+                f"pricing) failed to price a bid. idx={idx}, retry={retry}")
 
 
 class Bid:
