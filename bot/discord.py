@@ -1,20 +1,21 @@
 
 
 from nextcord.ext import commands
-import asyncio 
+import asyncio
+
 
 class Discord:
     bot = commands.Bot(command_prefix='$')
     ready = asyncio.Event()
 
-    async def start(self, token:str):
+    async def start(self, token: str):
         self.discord_task = asyncio.create_task(Discord.bot.start(token))
         await Discord.ready.wait()
 
     async def exit(self):
         await Discord.bot.close()
 
-    async def send(self, channel_id:int, message:str):
+    async def send(self, channel_id: int, message: str):
         channel = Discord.bot.get_channel(channel_id)
         if channel is None:
             raise Exception(f"discord) Can not find channel: {channel_id}")
@@ -23,7 +24,8 @@ class Discord:
 
     @bot.event
     async def on_ready():
-        print(f"Discord bot logged in as name={Discord.bot.user.name}, id={Discord.bot.user.id}")
+        print(
+            f"Discord bot logged in as name={Discord.bot.user.name}, id={Discord.bot.user.id}")
         Discord.ready.set()
 
     # @bot.event
@@ -42,16 +44,16 @@ def load_settings(file):
     import json
     with open(file, 'r') as j:
         return json.loads(j.read())
-        
+
 
 async def main():
     import os
     path = os.path.dirname(os.path.abspath(__file__))
     settings = os.path.join(path, ".bot.json")
 
-    token, channel = load_settings(settings)    
+    token, channel = load_settings(settings)
     print(f"bot information: token={token}, channel={channel}")
-    
+
     bot = Discord()
 
     await bot.start(token)
@@ -64,15 +66,10 @@ if __name__ == '__main__':
 
     # windows problem
     # RuntimeError: Event loop is closed
-    # https://gmyankee.tistory.com/330    
+    # https://gmyankee.tistory.com/330
     import sys
     py_ver = int(f"{sys.version_info.major}{sys.version_info.minor}")
     if py_ver > 37 and sys.platform.startswith('win'):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
- 
+
     asyncio.run(main())
-
-
-
-
-
