@@ -220,7 +220,9 @@ def incon_bid_listitem_is_activated(listitem):
 
 
 def incon_bid_get_listitem(webdriver, idx):
-    return webdriver.find_element(By.XPATH, f'//*[@id="bid_list"]/li[{idx + 1}]')
+    xs = webdriver.find_elements(
+        By.XPATH, f'//*[@id="bid_list"]/li[{idx + 1}]')
+    return xs[0] if len(xs) == 1 else None
 
 
 def incon_bid_get_listitems(webdriver):
@@ -377,6 +379,10 @@ def incon_bid_price_all(webdriver):
         retry = 0
         while retry < 2:
             item = incon_bid_get_listitem(webdriver, idx)
+            if not item:
+                log().error(
+                    f"pricing) failed to get item. idx={idx}")
+                break
             if incon_bid_listitem_has_price(item):
                 log().info(
                     f"pricing) The bid was priced. idx={idx}, retry={retry}")
@@ -391,6 +397,13 @@ def incon_bid_price_all(webdriver):
         if not priced:
             log().error(
                 f"pricing) failed to price a bid. idx={idx}, retry={retry}")
+
+    # Validate that number of item has been changed.
+    items = incon_bid_get_listitems(webdriver)
+    curr = len(items)
+    if counts != curr:
+        raise Exception(
+            f"Number of Items has been changed. prev={counts}, curr={curr}")
 
 
 class Bid:
