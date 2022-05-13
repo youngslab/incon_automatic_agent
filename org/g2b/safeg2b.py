@@ -88,8 +88,10 @@ def safeg2b_window_message_confirm():
 
 def safeg2b_go_to_login_page():
     try:
+        __logger().info("try to go home.")
         auto.windows.img_click(resmgr.get('safeg2b_0_etc_homepage.png'))
     except Exception as _:
+        __logger().info("Can't go home. But it's ok. That means it's already at home")
         pass
 
 
@@ -230,6 +232,7 @@ def safeg2b_participate_2_8_bid_lottery_number():
         "safeg2b_2_8_lottery_number_checkbox.png"))
     boxes = random.choices(boxes, k=2)
     for box in boxes:
+        __logger().debug(f"click a check button. box id={box}")
         auto.windows.click(*box)
 
     # click buttons

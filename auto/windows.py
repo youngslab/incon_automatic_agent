@@ -67,6 +67,9 @@ def click(hwnd, x, y):
     mouse.position = (app_x + x, app_y + y)
     mouse.click(pynput.mouse.Button.left, 1)
 
+    # To have some gap between operations
+    time.sleep(0.1)
+
 
 def type(text):
     # keyboard input
@@ -108,23 +111,22 @@ def is_overlapped(rect_a, rect_b):
 def wait_until(func, timeout=10, interval=0.5):
     start = time.time()
     curr = 0
+    retry = 0
     while True:
-
+        curr = time.time() - start
+        retry = retry + 1
         res = func()
         if res != None and res != 0:
             return res
 
-        curr = time.time() - start
-        # __logger().info((f"wait_until) curr={curr:.4f}")
-
         if curr > timeout:
+            __logger().error(
+                f"Timeout! wait_until takes {curr}. timeout={timeout}, interval={interval}, retry={retry}")
             break
 
         # every 500ms
         time.sleep(interval)
 
-    __logger().info(
-        f"wait_until takes {curr}. timeout={timeout}, interval={interval}")
     return res
 
 # --------------------------
@@ -185,11 +187,11 @@ def img_find_all(img, grayscale=True, confidence=.9):
     return [center(p) for p in unique]
 
 
-def img_wait_until(img, timeout=0.1, grayscale=True, confidence=.9):
+def img_wait_until(img, timeout=1, grayscale=True, confidence=.9):
     return wait_until(lambda: img_find(img, grayscale=grayscale, confidence=confidence), timeout=timeout)
 
 
-def img_click(img, timeout=0.1, grayscale=True, confidence=.9):
+def img_click(img, timeout=1, grayscale=True, confidence=.9):
     __logger().debug(f"Click {os.path.basename(img)}")
     center = img_wait_until(img, timeout=timeout,
                             grayscale=grayscale, confidence=confidence)
@@ -198,7 +200,7 @@ def img_click(img, timeout=0.1, grayscale=True, confidence=.9):
     pyautogui.click(center)
 
 
-def img_type(img, msg, timeout=0.1, grayscale=True, confidence=.9):
+def img_type(img, msg, timeout=1, grayscale=True, confidence=.9):
     img_click(img, timeout=timeout, grayscale=grayscale, confidence=confidence)
     time.sleep(1)
 

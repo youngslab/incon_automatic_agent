@@ -80,7 +80,6 @@ def logger_init(basedir: str = None, new_log_file=True):
     if basedir:
 
         config_file = os.path.join(basedir, "logger.json")
-        print(f"confifile={config_file}")
         if os.path.exists(config_file):
             config = iaa_load_logger_config(config_file)
 
