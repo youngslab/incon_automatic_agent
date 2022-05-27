@@ -1,0 +1,6 @@
+selenium
+win32gui
+pynput
+pyautogui
+pyautoit
+plum-py

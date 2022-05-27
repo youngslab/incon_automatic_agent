@@ -5,6 +5,7 @@ import os
 import traceback
 from org.incon import Incon
 from org.g2b.g2b import G2B
+from org.kepco import Kepco
 
 import logging
 from account import account_get
@@ -24,9 +25,16 @@ def create_data_provider():
 
 def create_markets() -> dict:
     markets = dict()
+
     pw = account_get("g2b", "pw")
     rn = account_get("g2b", "rn")
     markets['나라장터'] = G2B(pw, rn)
+
+    kepco_id = account_get("kepco", "id")
+    kepco_pw = account_get("kepco", "pw")
+    kepco_cert = account_get("kepco", "cert")
+    markets['한국전력'] = Kepco(kepco_id, kepco_pw, kepco_cert)
+
     return markets
 
 

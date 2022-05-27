@@ -1,7 +1,9 @@
 
+import autoit
 import logging
+import time
 from auto import selenium
-from plum import dispatch
+from plum import dispatch  # mulitple dispatch
 
 from typing import Tuple, Union, List
 
@@ -24,6 +26,28 @@ def log():
 __default_timeout = 10
 
 
+def auto_wait_until(func, *, timeout=__default_timeout, interval=0.5):
+    start = time.time()
+    curr = 0
+    retry = 0
+    while True:
+        curr = time.time() - start
+        retry = retry + 1
+        res = func()
+        if res != None and res != 0:
+            return res
+
+        if curr > timeout:
+            log().error(
+                f"Timeout! wait_until takes {curr}. timeout={timeout}, interval={interval}, retry={retry}")
+            break
+
+        # every 500ms
+        time.sleep(interval)
+
+    return res
+
+
 @dispatch
 def auto_find_element(driver: WebDriver, locator: tuple, timeout: int = __default_timeout) -> Union[WebElement, None]:
     try:
@@ -38,6 +62,14 @@ def auto_find_element(driver: WebDriver, locator: tuple, timeout: int = __defaul
 @dispatch
 def auto_find_element(driver: WebDriver, by: str, path: str, timeout: int = __default_timeout) -> Union[WebElement, None]:
     return auto_find_element(driver, (by, path), timeout)
+
+
+@dispatch
+def auto_find_element(element: WebElement, by: str, path: str, timeout: int = __default_timeout) -> WebElement:
+    def _find():
+        xs = element.find_elements(by, path)
+        return xs[0] if len(xs) > 0 else None
+    return auto_wait_until(lambda: _find())
 
 
 @dispatch
@@ -87,10 +119,37 @@ def auto_type(element: WebElement, text: str) -> bool:
 @dispatch
 def auto_type(driver: WebDriver, locator: Tuple[str, str], text: str, timeout: int = __default_timeout) -> bool:
     element = auto_find_element(driver, locator, timeout)
-    print(f"Type. element={element}")
     return auto_type(element, text)
 
 
 @dispatch
 def auto_type(driver: WebDriver, by: str, path: str, text: str, timeout: int = __default_timeout) -> bool:
     return auto_type(driver, (by, path), text, timeout)
+
+
+def auto_file_chooser(filepath):
+    window = "[TITLE:열기; CLASS:#32770]"
+    autoit.win_wait(window, timeout=10)
+    autoit.win_activate(window)
+    autoit.win_wait_active(window, timeout=10)
+
+    # Needs some time to wait next steps.
+    time.sleep(1)
+
+    # fill the edit box with filepath
+    edit_class = "Edit1"
+    autoit.control_set_text(window, edit_class, f"\"{filepath}\"")
+    log().info(f"Typed a filepath. filepath={filepath}")
+
+    # click ok button
+    button_class = "Button1"
+    autoit.control_click(window, button_class)
+
+
+def contains(a: str, b: str) -> bool:
+    return True if a.find(b) >= 0 else False
+
+
+def auto_is_visible(element: WebElement):
+    style = element.get_attribute("style")
+    return not contains(style, "display:none") and not contains(style, "display: none")
