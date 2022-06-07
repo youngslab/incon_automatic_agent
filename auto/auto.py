@@ -15,6 +15,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from selenium.common.exceptions import TimeoutException
+
 # WebDriver = selenium.webdriver.remote.webdriver.WebDriver
 # By = selenium.webdriver.common.by.By
 
@@ -48,14 +50,24 @@ def auto_wait_until(func, *, timeout=__default_timeout, interval=0.5):
     return res
 
 
+# Return an alert object
+def auto_find_alert(driver: WebDriver, timeout=__default_timeout):
+    try:
+        WebDriverWait(driver, timeout).until(
+            EC.alert_is_present(), "Can not find an alert window")
+        return driver.switch_to.alert
+    except TimeoutException:
+        return None
+
+
 @dispatch
 def auto_find_element(driver: WebDriver, locator: tuple, timeout: int = __default_timeout) -> Union[WebElement, None]:
     try:
         return WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located(locator))
-    except:
+    except Exception as e:
         log().error(
-            f"Failed to find an element. locator={locator}, timeout={timeout}")
+            f"Failed to find an element. locator={locator}, timeout={timeout}, excpetion={e}")
         return None
 
 
@@ -153,3 +165,22 @@ def contains(a: str, b: str) -> bool:
 def auto_is_visible(element: WebElement):
     style = element.get_attribute("style")
     return not contains(style, "display:none") and not contains(style, "display: none")
+
+
+def auto_activate(title, *, timeout=30) -> bool:
+    window = f"[TITLE:{title}]"
+    if not autoit.win_wait(window, timeout=timeout):
+        log().error(f"Failed to find a window. title={title}")
+        return False
+
+    if not autoit.win_activate(window):
+        log().error(f"Failed to activate a window. title={title}")
+        return False
+
+    return True
+
+
+def auto_go_bottom(title, *, timeout=30):
+    auto_activate(title, timeout=timeout)
+    autoit.send("{F6}")
+    autoit.send("{END}")

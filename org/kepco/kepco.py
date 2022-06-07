@@ -41,8 +41,8 @@ def kepco_go_homepage(driver):
 
 
 def kepco_certificate_login(driver, pw):
-    with Frame(driver, (By.XPATH, '//iframe[contains(@src,"kica/WebUI/kepco_html/kicaCert.jsp")]')):
-        auto_click(driver, By.XPATH, '//div[text()="사업자(범용)"]')
+    with Frame(driver, (By.XPATH, '//iframe[contains(@src,"kica/WebUI/kepco_html/kicaCert.jsp")]'), timeout=30):
+        auto_click(driver, By.XPATH, '//div[text()="사업자(범용)"]', timeout=60)
         auto_type(driver, By.ID, "certPwd", pw)
         auto_click(driver, By.XPATH, '//img[@src="../img/btn_confirm.png"]')
 
@@ -93,7 +93,10 @@ def kepco_notice_close(driver: WebDriver, notice: WebElement):
 
 
 def kepco_get_messagebox(driver: WebDriver):
-    return auto_find_element(driver, By.XPATH, '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]')
+    messagebox = auto_find_element(
+        driver, By.XPATH, '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]')
+    auto_wait_until(lambda: kepco_messagebox_is_open(messagebox))
+    return messagebox
 
 
 def kepco_messagebox_is_open(msgbox: WebElement):
@@ -110,11 +113,11 @@ def kepco_messagebox_button_get_text(button: WebElement):
     return button.find_element(By.XPATH, "./span/span/span[2]").text
 
 
-def kepco_messagebox_get_buttons(msgbox: WebElement):
-    if not msgbox:
+def kepco_messagebox_get_buttons(messagebox: WebElement):
+    if not messagebox:
         log().error("Message box is none")
         return None
-    return msgbox.find_elements(By.XPATH, "./div[3]/div/div/a")
+    return messagebox.find_elements(By.XPATH, "./div[3]/div/div/a")
 
 
 def kepco_messagebox_get_button(messagebox: WebElement, text: str):
@@ -124,6 +127,13 @@ def kepco_messagebox_get_button(messagebox: WebElement, text: str):
             continue
         return button
     return None
+
+
+def kepco_messagebox_get_text(messagebox: WebElement):
+    if not messagebox:
+        log().error("Message box is none")
+        return None
+    return messagebox.find_element(By.XPATH, "./div[2]/div/div/div[1]/div/div/div[2]/div/div/div[1]/div/div").text
 
 
 # --------------------
@@ -175,6 +185,7 @@ def kepco_pre_go_register_page(driver: WebDriver):
 def kepco_pre_search_notice_number(driver: WebDriver, number):
     # 공고번호 input
     bid_number = auto_find_element(driver, By.XPATH, '//input[@title="공고번호"]')
+
     bid_number.clear()
     time.sleep(0.5)
     bid_number.send_keys(number)
@@ -307,8 +318,12 @@ def kepco_pre_submit_application_form(driver):
 def kepco_pre_confirm_submission(driver: WebDriver):
     messagebox = kepco_get_messagebox(driver)
 
-    if not kepco_messagebox_is_open(messagebox):
-        raise Exception("Failed to confirmed submission.")
+    # XXX: TEMP - wait
+    input("press enter to continue")
+
+    auto_wait_until(lambda: kepco_messagebox_is_open(messagebox))
+
+    print(f'messagebox: {kepco_messagebox_get_text(messagebox)}')
 
     button = kepco_messagebox_get_button(messagebox, "예")
     if button:
@@ -362,14 +377,14 @@ def kepco_pre_register(driver: WebDriver, number):
     kepco_attach_small_business_confirmation_document(driver, filepath)
 
     # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
-    time.sleep(5)
+    time.sleep(10)
 
     # 모든 조항에 동의
     log().info("2.3 aggreement")
     kepco_pre_agree_commitments(driver)
 
     # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
-    time.sleep(5)
+    time.sleep(10)
 
     # 2.3 제출 버튼 클릭
     log().info("2.4 submit")
@@ -377,8 +392,11 @@ def kepco_pre_register(driver: WebDriver, number):
 
     # 3. 정리
     # 3.1 확인
+    # XXX: 제출 버튼을 클릭한 후, popup이open될 때 까지 기다린다.
     log().info("3.1 confirm")
-    kepco_pre_confirm_submission(driver)
+    if not kepco_pre_confirm_submission(driver):
+        # "입찰참가신청등록 화면에 있는 닫기버튼을 눌러 다시 신청하세요."
+        return False
 
     # 3.2 certificate login
     log().info("3.2 certifiate")
@@ -391,6 +409,7 @@ def kepco_pre_register(driver: WebDriver, number):
 
 
 class Kepco:
+    # headless: Do not allow with headless, It will fails to login.
     def __init__(self, id, pw, cert_pw, headless=False):
         log().debug("__init__")
         self.__cert_pw = cert_pw

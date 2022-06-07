@@ -10,7 +10,7 @@ def logger():
 
 
 def __account_load_json(filepath):
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         return json.loads(f.read())
 
 

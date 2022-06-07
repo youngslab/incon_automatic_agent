@@ -70,7 +70,7 @@ def wait_until(driver, locator, timeout):
         return False
 
 
-def find_element_until(driver, locator, timeout=2):
+def find_element_until(driver, locator, timeout=10):
     try:
         return WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located(locator))
@@ -196,9 +196,11 @@ class Window:
 
 
 class Frame:
-    def __init__(self, driver, locator):
+    def __init__(self, driver, locator, timeout=10):
         self.driver = driver
-        self.frame = find_element_until(driver, locator)
+        self.frame = find_element_until(driver, locator, timeout=timeout)
+        if not self.frame:
+            raise Exception(f"Failed to find frame. locator={locator}")
 
     def __enter__(self):
         self.driver.switch_to.frame(self.frame)

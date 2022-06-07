@@ -6,6 +6,7 @@ import traceback
 from org.incon import Incon
 from org.g2b.g2b import G2B
 from org.kepco import Kepco
+from org.d2b import D2B
 
 import logging
 from account import account_get
@@ -34,6 +35,12 @@ def create_markets() -> dict:
     kepco_pw = account_get("kepco", "pw")
     kepco_cert = account_get("kepco", "cert")
     markets['한국전력'] = Kepco(kepco_id, kepco_pw, kepco_cert)
+
+    d2b_id = account_get("d2b", "id")
+    d2b_pw = account_get("d2b", "pw")
+    d2b_user = account_get("d2b", "user")
+    d2b_cert = account_get("d2b", "cert")
+    markets['국방전자조달'] = D2B(d2b_id, d2b_pw, d2b_user, d2b_cert)
 
     return markets
 
@@ -116,3 +123,4 @@ if __name__ == "__main__":
     except Exception as e:
         traceback.print_exception(*sys.exc_info())
         log().error(e)
+        input("Press any keys to finish.")

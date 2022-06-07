@@ -15,6 +15,13 @@ import win32process
 import org.g2b.certificate
 from org.g2b.res import resmgr
 
+from auto import *
+import auto.windows
+import auto.selenium
+
+
+__default_timeout = 60
+
 
 def __logger():
     import logging
@@ -76,10 +83,10 @@ def safeg2b_window_message_get_title():
 
 def safeg2b_window_message_confirm():
     title = safeg2b_window_message_get_title()
-    hwnd = auto.windows.window_wait_until(title, timeout=30)
-    auto.windows.bring_window_to_top(hwnd)
+    if not auto_activate(title, timeout=__default_timeout):
+        raise Exception(f"{title} Window is not Activated")
     auto.windows.img_click(resmgr.get(
-        'safeg2b_message_confirm_button.png'), timeout=30)
+        'safeg2b_message_confirm_button.png'), timeout=__default_timeout)
 
 # ---------------------------
 # Log In APIs
@@ -111,13 +118,13 @@ def safeg2b_login(pw: str, id):
         __logger().info("Already logged in.")
         return
 
-    handle = safeg2b_get_main_window_until()
-    auto.windows.bring_window_to_top(handle)
+    if not auto_activate(safeg2b_get_window_title()):
+        raise Exception("SAFEG2B Window is not Activated")
 
     # login)  check box
     __logger().info("login) 1. 지문 예외 check box ")
     auto.windows.img_click(resmgr.get(
-        'safeg2b_finger_print_exception_checkbox.png'), timeout=10)
+        'safeg2b_finger_print_exception_checkbox.png'), timeout=__default_timeout)
 
     # 2. login button
     __logger().info("login) 2. 로그인 버튼 ")
@@ -126,22 +133,26 @@ def safeg2b_login(pw: str, id):
     # 3. waiting for the page movement and then click
     __logger().info("login) 3. 지문 예외 확인 ")
     auto.windows.img_click(resmgr.get(
-        'safeg2b_finger_print_exception_confirm_button.png'), timeout=30)
+        'safeg2b_finger_print_exception_confirm_button.png'), timeout=__default_timeout)
 
     # 4. 인증서 로그인
     __logger().info("login) 4. 인증서 로그인")
     safeg2b_certificate_login(pw)
 
     __logger().info("login) 5. 주민번호 입력")
+
     # 6. Waiting for the id page
-    auto.windows.bring_window_to_top(handle)
+    # auto.windows.bring_window_to_top(handle)
+    if not auto_activate(safeg2b_get_window_title()):
+        raise Exception("SAFEG2B Window is not Activated")
+
     # 7. Focus input for id and type
     auto.windows.img_type(resmgr.get('safeg2b_id_front_number_input.png'),
-                          f"{id.split('-')[0]}{id.split('-')[1]}", timeout=30)
+                          f"{id.split('-')[0]}{id.split('-')[1]}", timeout=__default_timeout)
     # when second part got focused automatically, the image going to be changed so that it is hightlighted.
     # auto.windows.img_type(resmgr.get('safeg2b_id_back_number_input.png'), id.split('-')[1])
     auto.windows.img_click(resmgr.get(
-        'safeg2b_id_confirm_button.png'), timeout=5)
+        'safeg2b_id_confirm_button.png'), timeout=__default_timeout)
 
     # 9. 인증서 로그인(개인)
     # market.certificate.cert_personal_user_login(pw)
@@ -165,19 +176,21 @@ def safeg2b_login(pw: str, id):
 
 def safeg2b_participate_2_4_bid_participate():
     auto.windows.window_select("물품공고분류조회 - SafeG2B")
-    auto.windows.img_click(resmgr.get("safeg2b_2_4_bid_button.png"), timeout=5)
+    auto.windows.img_click(resmgr.get(
+        "safeg2b_2_4_bid_button.png"), timeout=__default_timeout)
 
 
 def safeg2b_participate_2_5_bid_notice():
-    notice_hwnd = auto.windows.window_wait_until("투찰 공지사항 - SafeG2B")
-    auto.windows.bring_window_to_top(notice_hwnd)
+    title = "투찰 공지사항 - SafeG2B"
+    if not auto_activate(title, timeout=__default_timeout):
+        raise Exception(f"A Window is not Activated. title={title}")
 
     # After bring a window to top, It takes not niggrigible time.
     auto.windows.wait_until_image(resmgr.get(
-        "safeg2b_2_5_bid_notice_title_image.png"), timeout=5)
+        "safeg2b_2_5_bid_notice_title_image.png"), timeout=__default_timeout)
     pyautogui.press("end")
     auto.windows.wait_until_image(resmgr.get(
-        "safeg2b_2_5_bid_notice_yes_checkbox.png"), timeout=5)
+        "safeg2b_2_5_bid_notice_yes_checkbox.png"), timeout=__default_timeout)
 
     yes_buttons = auto.windows.img_find_all(
         resmgr.get("safeg2b_2_5_bid_notice_yes_checkbox.png"))
@@ -189,43 +202,41 @@ def safeg2b_participate_2_5_bid_notice():
 
 
 def safeg2b_participate_2_6_bid_doc(price):
-    hwnd = auto.windows.window_select("물품구매입찰서:나라장터 - SafeG2B")
+    title = "물품구매입찰서:나라장터 - SafeG2B"
+    auto_activate(title)
 
     # click buttons
     auto.windows.img_click(resmgr.get(
-        "safeg2b_2_6_bid_doc_checkbox.png"), timeout=5)
+        "safeg2b_2_6_bid_doc_checkbox.png"), timeout=__default_timeout)
     auto.windows.img_type(resmgr.get(
-        "safeg2b_2_6_bid_doc_cost_input.png"), price, timeout=10)
+        "safeg2b_2_6_bid_doc_cost_input.png"), price, timeout=__default_timeout)
 
-    # make the input above out of focus - click center of the window.
-    # TODO: Find more efficient or reasonable way
-    cp = auto.windows.window_get_center(hwnd)
-    auto.windows.mouse_move(*cp)
-    auto.windows.mouse_click()
-
-    # scroll to the end
-    pyautogui.press('end')
+    # scroll down to end
+    auto_go_bottom(title)
 
     # click buttons
     auto.windows.img_click(resmgr.get(
-        "safeg2b_2_6_bid_doc_checkbox.png"), timeout=5)
+        "safeg2b_2_6_bid_doc_checkbox.png"), timeout=__default_timeout)
     auto.windows.img_click(resmgr.get("safeg2b_2_6_bid_doc_send_button.png"))
 
 
 def safeg2b_participate_2_7_bid_price_confirmation():
-    auto.windows.window_select("투찰금액 확인 - SafeG2B")
+    auto_activate("투찰금액 확인 - SafeG2B", timeout=__default_timeout)
+
     auto.windows.img_click(resmgr.get(
-        'safeg2b_2_7_cost_confirm_checkbox.png'), timeout=5)
-    auto.windows.img_click(resmgr.get('safeg2b_2_7_cost_confirm_button.png'))
+        'safeg2b_2_7_cost_confirm_checkbox.png'), timeout=__default_timeout)
+
+    auto.windows.img_click(resmgr.get(
+        'safeg2b_2_7_cost_confirm_button.png'), timeout=__default_timeout)
 
 
 def safeg2b_participate_2_8_bid_lottery_number():
     # 추첨번호 선택
-    auto.windows.window_select("추첨번호 선택 - SafeG2B")
+    auto_activate("추첨번호 선택 - SafeG2B", timeout=__default_timeout)
 
     # wait for checkboxes
     auto.windows.img_wait_until(resmgr.get(
-        "safeg2b_2_8_lottery_number_checkbox.png"), timeout=10)
+        "safeg2b_2_8_lottery_number_checkbox.png"), timeout=__default_timeout)
 
     # find all checkboxes
     boxes = auto.windows.img_find_all(resmgr.get(
@@ -240,10 +251,10 @@ def safeg2b_participate_2_8_bid_lottery_number():
         'safeg2b_2_8_lottery_number_send_button.png'))
     # Issue: 아래 2개의 img가 비슷하여 2번 click되는 효과가 생긴다. 중간에 잠시 시간을 준다.
     auto.windows.img_click(resmgr.get(
-        'safeg2b_2_8_lottery_number_confirm_button.png'), timeout=5)
+        'safeg2b_2_8_lottery_number_confirm_button.png'), timeout=__default_timeout)
     # TODO: 특징있는 image를 기다리도록 변경하자.
     auto.windows.img_wait_until(resmgr.get(
-        'safeg2b_2_8_lottery_number_popup_characteristic.png'), timeout=5)
+        'safeg2b_2_8_lottery_number_popup_characteristic.png'), timeout=__default_timeout)
     auto.windows.img_click(resmgr.get(
         'safeg2b_2_8_lottery_number_certi_confrim_button.png'), confidence=0.8)
 
@@ -255,40 +266,42 @@ def safeg2b_participate_2_9_certificate(pw):
 def safeg2b_participate_2_10_alert_confirm():
     auto.windows.window_select("나라장터")
     auto.windows.img_click(resmgr.get(
-        'safeg2b_2_9_confirm_button.png'), timeout=5)
+        'safeg2b_2_9_confirm_button.png'), timeout=__default_timeout)
 
 
 def safeg2b_participate_2_11_history_check():
-    auto.windows.window_select("전자입찰 송수신상세이력조회 - SafeG2B")
+    auto_activate("전자입찰 송수신상세이력조회 - SafeG2B",timeout=__default_timeout)
     auto.windows.img_click(resmgr.get(
-        'safeg2b_2_10_close_button.png'), timeout=5)
+        'safeg2b_2_10_close_button.png'), timeout=__default_timeout)
 
 
 def safeg2b_participate_2_12_survery():
     # 2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B
-    auto.windows.window_select("나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
+    auto_activate("나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B",
+                  timeout=__default_timeout)
     auto.windows.img_click(resmgr.get(
-        'safeg2b_2_11_survey_close_button.png'), timeout=5)
+        'safeg2b_2_11_survey_close_button.png'), timeout=__default_timeout)
 
 
 def safeg2b_participate(pw, notice_no: str, price: str):
-    handle = safeg2b_get_main_window_until()
-    auto.windows.bring_window_to_top(handle)
+    if not auto_activate(safeg2b_get_window_title(), timeout=__default_timeout):
+        raise Exception("SAFEG2B Window is not Activated")
 
     __logger().info("2.1 bid_info (New Page)")
     auto.windows.img_click(resmgr.get(
-        'safeg2b_bid_bid_info_button.png'), timeout=30)
+        'safeg2b_bid_bid_info_button.png'), timeout=__default_timeout)
 
     __logger().info("2.2 search ")
     auto.windows.img_type(resmgr.get(
-        'safeg2b_bid_search_input.png'), notice_no, timeout=30)
+        'safeg2b_bid_search_input.png'), notice_no, timeout=__default_timeout)
     auto.windows.img_click(resmgr.get(
-        'safeg2b_bid_search_button.png'), timeout=5)
+        'safeg2b_bid_search_button.png'), timeout=__default_timeout)
 
     __logger().info("2.3 bid participate")
-    auto.windows.bring_window_to_top(handle)
+    if not auto_activate(safeg2b_get_window_title()):
+        raise Exception("SAFEG2B Window is not Activated")
     auto.windows.img_click(resmgr.get(
-        "safeg2b_2_3_bid_finger_print_button.png"), timeout=30)
+        "safeg2b_2_3_bid_finger_print_button.png"), timeout=__default_timeout)
 
     __logger().info("2.4 bid participate(2)")
     safeg2b_participate_2_4_bid_participate()
@@ -320,9 +333,8 @@ def safeg2b_participate(pw, notice_no: str, price: str):
 
 
 def safeg2b_initialize():
-    handle = safeg2b_get_main_window_until()
-    auto.windows.bring_window_to_top(handle)
-
+    if not auto_activate(safeg2b_get_window_title(), timeout=100):
+        raise Exception("SAFEG2B Window is not Activated")
     safeg2b_go_to_login_page()
 
 
@@ -335,18 +347,12 @@ def safeg2b_close() -> bool:
 
 def safeg2b_login_validate():
     pos = auto.windows.img_wait_until(resmgr.get(
-        "safeg2b_login_my_bid_center.png"), timeout=5)
+        "safeg2b_login_my_bid_center.png"), timeout=__default_timeout)
     return False if pos is None else True
 
 
-def safeg2b_get_window_handle(timeout=60):
-    title = safeg2b_get_window_title()
-    return auto.windows.wait_until_window_handle(title, timeout=timeout)
-
-
 def test_validate_login():
-    hwnd = safeg2b_get_window_handle()
-    auto.windows.bring_window_to_top(hwnd)
+
     print(safeg2b_login_validate())
 
 
