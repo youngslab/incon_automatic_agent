@@ -133,6 +133,51 @@ def g2b_register(driver, pns):
 
 
 class G2B:
+    def __init__(self, pw, close_windows=True, headless=True):
+        self.__driver = auto.selenium.create_edge_driver(headless=headless)
+        self.__close_windows = close_windows
+        go_homepage(self.__driver)
+        login(self.__driver, pw)
+        self.__driver.minimize_window()
+
+    def __del__(self):
+        if self.__close_windows:
+            self.__driver.close()
+
+    def __register(self, pns):
+        return g2b_register(self.__driver, pns)
+
+    def register(self, pre):
+        product_numbers = pre.number.split(",")
+        product_numbers = [pn.strip() for pn in product_numbers]
+        return self.__register(product_numbers)
+
+
+class SafeG2B:
+    def __init__(self, pw, rn, close_windows=True):
+        self.__pw = pw
+        self.__close_windows = close_windows
+
+        # safe g2b
+        safeg2b_run()
+        safeg2b_initialize()
+        success = safeg2b_login(pw, rn)
+        if not success:
+            raise Exception("Failed to login to safeg2b")
+
+    def __del__(self):
+        if self.__close_windows:
+            safeg2b_close()
+
+    def participate(self, bid):
+        logger().info(f"participate in {bid.number} price={bid.price}")
+        if not safeg2b_is_running():
+            return False, "safeg2b instance is not running"
+        safeg2b_participate(self.__pw, bid.number, str(bid.price))
+        return True, None
+
+
+class G2B__:
     def __init__(self, pw, rn, close_windows=True, headless=True):
         logger().debug("__init__")
         self.__driver = auto.selenium.create_edge_driver(headless=headless)
