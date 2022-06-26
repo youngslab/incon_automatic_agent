@@ -52,8 +52,7 @@ __pre_markets = dict()
 def create_pre_market(market: str):
     if market == "나라장터":
         pw = account_get("g2b", "pw")
-        rn = account_get("g2b", "rn")
-        return G2B(pw, rn)
+        return G2B(pw)
     elif market == "한국전력":
         kepco_id = account_get("kepco", "id")
         kepco_pw = account_get("kepco", "pw")

@@ -27,6 +27,60 @@ def log():
 
 __default_timeout = 10
 
+# -----------------------
+# wait element variation
+# -----------------------
+
+
+@dispatch
+def wait_clickable(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> WebElement:
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.element_to_be_clickable(locator))
+    except Exception as e:
+        return None
+
+
+@dispatch
+def wait_alert(driver: WebDriver, timeout: int = __default_timeout):
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.alert_is_present())
+    except Exception as e:
+        return None
+
+
+@dispatch
+def wait_no_element(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> bool:
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.invisibility_of_element_located(locator))
+    except Exception as e:
+        return None
+
+
+@dispatch
+def wait_element(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> WebElement:
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located(locator))
+    except Exception as e:
+        return None
+
+
+@dispatch
+def wait_all_elements(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout):
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.presence_of_all_elements_located(locator))
+    except:
+        log().error(
+            f"Failed to find an element. locator={locator}, timeout={timeout}")
+        return []
+
+# -----------------------
+# -----------------------
+
 
 def auto_wait_until(func, *, timeout=__default_timeout, interval=0.5):
     start = time.time()
@@ -66,8 +120,8 @@ def auto_find_element(driver: WebDriver, locator: tuple, timeout: int = __defaul
         return WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located(locator))
     except Exception as e:
-        log().error(
-            f"Failed to find an element. locator={locator}, timeout={timeout}, excpetion={e}")
+        # log().error(
+        #     f"Failed to find an element. locator={locator}, timeout={timeout}, excpetion={e}")
         return None
 
 
@@ -85,14 +139,14 @@ def auto_find_element(element: WebElement, by: str, path: str, timeout: int = __
 
 
 @dispatch
-def auto_find_all_elements(driver: WebDriver, by: str, path: str, timeout: int = __default_timeout) -> List[WebElement]:
+def auto_find_all_elements(driver: WebDriver, by: str, path: str, timeout: int = __default_timeout):
     try:
         return WebDriverWait(driver, timeout).until(
             EC.presence_of_all_elements_located((by, path)))
     except:
         log().error(
             f"Failed to find an element. locator={(by, path)}, timeout={timeout}")
-        return None
+        return []
 
 
 @dispatch
@@ -110,7 +164,9 @@ def auto_click(driver: WebDriver, element: WebElement) -> bool:
 
 @dispatch
 def auto_click(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> bool:
-    element = auto_find_element(driver, locator, timeout)
+    wait = WebDriverWait(driver, timeout)
+    element = wait.until(EC.element_to_be_clickable(locator))
+    # element = auto_find_element(driver, locator, timeout)
     return auto_click(driver, element)
 
 

@@ -12,7 +12,392 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 import account
 from auto import *
-from auto.auto import auto_is_visible
+
+# MessageBox
+import win32api
+from win32con import MB_SYSTEMMODAL, MB_YESNO
+
+# ------------------------
+# Version 2
+# ------------------------
+# ID: Kepco - 모든 popup 창 닫기
+
+
+def close_all_popup(driver, timeout=10):
+
+    start = time.time()
+
+    while True:
+        # messagebox
+        #  - 낙찰 후 미계약 건에 대한 공지         - 확인
+        #  - 변경 미등록시 입찰무효처리에 대한 공지 - 확인
+        messagebox = kepco_get_messagebox(driver)
+        if kepco_messagebox_is_open(messagebox):
+            confirm_btn = kepco_messagebox_get_button(messagebox, "확인")
+            auto_click(driver, confirm_btn)
+
+        # multiple notices
+        notices = kepco_get_notices(driver)
+        for notice in notices:
+            if kepco_notice_is_open(notice):
+                kepco_notice_close(driver, notice)
+
+        curr = time.time() - start
+        if curr > timeout:
+            break
+
+        time.sleep(0.5)
+
+
+# ------------------------
+# TAB APIs
+# ------------------------
+
+def wait_no_element(driver: WebDriver, locator, timeout: int = 10) -> bool:
+    try:
+        return WebDriverWait(driver, timeout).until(
+            EC.invisibility_of_element_located(locator))
+    except Exception as e:
+        return None
+
+# ID: Kepco - 모든 탭 닫기
+# Description: 항상
+
+
+def close_all_tab(driver: WebDriver):
+    # find close tab buttons
+    btns = wait_all_elements(
+        driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'))
+    for btn in btns:
+        btn.click()
+
+    # Wait until tabs are closed
+    # 탭에 있는 close button을 확인해 본다.
+    wait_no_element(
+        driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'), timeout=3)
+
+# ID: 입찰(투찰진행) 탭 열기
+# Precondition
+#    - home tab이 있어야 한다.
+
+
+def open_bid_tab(driver: WebDriver):
+    # Wait home tab:
+    if not wait_element(driver, (By.XPATH, '//span[text()="home"]')):
+        log().error("Not found home tab. We should wait until it comes")
+        return False
+
+    # TODO: 입찰/계약 버튼의 위치가 변경 될 수 도 있다.
+    # 입찰/계약 버튼
+    btn = wait_clickable(driver, (By.XPATH, '//span[text()="입찰/계약"]'))
+    if not btn:
+        log().error("Not found 입찰/계약 button")
+        return False
+    btn.click()
+
+    # 입찰(투찰진행) 버튼
+    btn = wait_clickable(driver, (By.XPATH, '//h4[text()=" 입찰(투찰진행) "]'))
+    if not btn:
+        log().error("Not found 입찰참가신청 button")
+        return False
+    btn.click()
+
+    # Wait until the tab created
+    # 탭에 있는 close button을 확인해 본다.
+    btn = wait_clickable(
+        driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'))
+    return True if btn else False
+
+# ID: 입찰(투찰진행) 탭 열기
+# Precondition
+#    - home tab이 있어야 한다.
+
+
+def open_register_tab(driver: WebDriver):
+    # Wait home tab:
+    if not wait_element(driver, (By.XPATH, '//span[text()="home"]')):
+        log().error("Not found home tab. We should wait until it comes")
+        return False
+
+    # TODO: 입찰/계약 버튼의 위치가 변경 될 수 도 있다.
+    # 입찰/계약 버튼
+    btn = wait_clickable(driver, (By.XPATH, '//span[text()="입찰/계약"]'))
+    if not btn:
+        log().error("Not found 입찰/계약 button")
+        return False
+    btn.click()
+
+    # 입찰참가신청 버튼
+    btn = wait_clickable(driver, (By.XPATH, '//h4[text()=" 입찰참가신청 "]'))
+    if not btn:
+        log().error("Not found 입찰참가신청 button")
+        return False
+    btn.click()
+
+    # Wait until the tab created
+    # 탭에 있는 close button을 확인해 본다.
+    btn = wait_clickable(
+        driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'))
+    return True if btn else False
+
+
+def create_driver(headless=False):
+    options = webdriver.EdgeOptions()
+    options.add_argument('log-level=3')
+    if headless:
+        options.add_argument('headless')
+        options.add_argument('disable-gpu')
+
+    # add extension
+    # SecuKit NX(edge://extensions/?id=hghadmnjlclmajeenogjjjefdecofpag)
+    extension_path = os.path.join(os.path.expanduser(
+        '~'), ".iaa", 'secukit_nx_1.0.1.12_0.crx')
+    options.add_extension(extension_path)
+
+    service = Service(EdgeChromiumDriverManager().install())
+    return webdriver.Edge(options=options, service=service)
+
+
+def login(driver: WebDriver, id, pw, cert):
+    log().debug("login")
+    kepco_go_homepage(driver)
+    kepco_login(driver, id, pw, cert)
+
+
+def register(driver: WebDriver, number, *, cert=None):
+
+    # close_all_tab
+    close_all_tab(driver)
+
+    # # 1. 공고번호 조회
+    if not open_register_tab(driver):
+        log().error("Failed to open register tab.")
+
+    # 1.2 조회
+    log().info("1.2 search")
+    # ID: Kepco - 입찰 - 공고번호 검색
+    # 공고번호 입력
+    num_input = wait_clickable(driver, (By.XPATH, '//input[@title="공고번호"]'))
+    num_input.send_keys(number)
+
+    # 조회 버튼 클릭
+    search_btn = wait_clickable(driver, (By.XPATH, '//span[text()="조회"]'))
+    search_btn.click()
+
+    #  1.3
+    log().info("1.3 validate")
+    if kepco_pre_is_current_registered(driver):
+        log().info("Already registered")
+        return True
+
+    log().info("1.4 apply")
+    if not kepco_pre_apply_participation(driver):
+        log().error("Failed to apply")
+        return False
+
+    # 2. Application Form
+    # 2.1.  메세지등의 팝업을 처리한다.
+    log().info("2.1 close popup")
+    kepco_pre_close_popup(driver)
+
+    # 2.2. 중소기업확인서 첨부
+    log().info("2.2 attach a file")
+    filepath = os.path.join(os.path.expanduser("~"), ".iaa", "AR_중소기업_확인서.pdf")
+    kepco_attach_small_business_confirmation_document(driver, filepath)
+
+    # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
+    time.sleep(10)
+
+    # 모든 조항에 동의
+    log().info("2.3 aggreement")
+    kepco_pre_agree_commitments(driver)
+
+    # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
+    time.sleep(10)
+
+    # 2.3 제출 버튼 클릭
+    log().info("2.4 submit")
+    kepco_pre_submit_application_form(driver)
+
+    # 3. 정리
+    # 3.1 확인
+    # XXX: 제출 버튼을 클릭한 후, popup이open될 때 까지 기다린다.
+    log().info("3.1 confirm")
+    if not kepco_pre_confirm_submission(driver):
+        # "입찰참가신청등록 화면에 있는 닫기버튼을 눌러 다시 신청하세요."
+        return False
+
+    # 3.2 certificate login (Optional)
+    if cert:
+        log().info("3.2 certifiate")
+        kepco_certificate_login(driver, cert)
+
+    # 확인 버튼 클릭(알림: 제출 하였습니다.
+    log().info("3.3 done")
+    kepco_pre_confirm_done(driver)
+
+    return True
+
+
+# --------------------------
+
+# ID: Kepco - 입찰 - 검색결과 검증
+# Description: 투찰진행상태를 확인한다. - 미제출
+def can_participate(driver: WebDriver) -> bool:
+    elem = auto_find_element(
+        driver, By.XPATH, "//div[2]/div/div[2]/table/tbody/tr/td[2]/div")
+    if elem.text == "미제출":
+        return True
+    else:
+        return False
+
+
+# ID: Kepco - 입찰 - 검색결과 검증
+def validate_bid_search_result(driver: WebDriver, number):
+    es = auto_find_all_elements(
+        driver, By.XPATH, '//div[@class="x-grid-row-checker"]')
+    if len(es) != 1:
+        log().error(
+            f"Failed to validate the result. Item should be only one. found={len(es)} ")
+        return False
+
+    # validate number
+    e = auto_find_element(
+        driver, By.XPATH, '//div[2]/table[1]/tbody/tr/td[5]/div[contains(@class,"x-grid-cell-inner")]')
+    bid_num = e.text
+    if number.find(bid_num) < 0:
+        log().error(
+            f"Failed to validate the result. Bid number missmatch. found={bid_num}, expected={number} ")
+        return False
+
+    return True
+
+
+def participate(driver, number, cost):
+    # close all tabs
+    close_all_tab(driver)
+
+    # open bid tab
+    if not open_bid_tab(driver):
+        log().error("Failed to open bind tab.")
+        return False
+
+    # ID: Kepco - 입찰 - 공고번호 검색
+    # 공고번호 입력
+    num_input = wait_clickable(driver, (By.XPATH, '//input[@title="공고번호"]'))
+    num_input.send_keys(number)
+
+    # 조회 버튼 클릭
+    # XXX: 가끔 click이 안되는 경우가 있다.
+    # auto_click(driver, By.XPATH, '//span[text()="조회"]')
+    search_btn = wait_clickable(driver, (By.XPATH, '//span[text()="조회"]'))
+    search_btn.click()
+
+    # messagebox : 공고일자의 최대 검색일자는 6개월 입니다. "확인"
+    msgbox = kepco_get_messagebox(driver)
+    if msgbox:
+        log().info(f"messagebox: text={msgbox.text}")
+        okbtn = kepco_messagebox_get_button(msgbox, "확인")
+        okbtn.click()
+
+    # ID: Kepco - 입찰 - 검색결과 검증
+    if not validate_bid_search_result(driver, number):
+        log().error("Validation Failed.")
+        return False
+
+    # Description: 투찰진행상태 가져오기
+    if not can_participate(driver):
+        log().info("Already Registered.")
+        return True
+
+    # ID: Kepco - 입찰 - 입찰참여 버튼
+    # checkbox click
+    log().info(f"Kepco - 입찰 - 입찰참여 버튼")
+    auto_click(driver, By.XPATH, '//div[@class="x-grid-row-checker"]')
+    # TODO: 안눌리는 경우가 생긴다.
+    if not auto_click(driver, By.XPATH, '//span[text()="입찰참여"]'):
+        log().error("Failed to click 입찰참여 button.")
+        return False
+
+    # messagebox - 입찰 창여 하시겠습니까?
+    msgbox = kepco_get_messagebox(driver)
+    log().info(f"messagebox: text={msgbox.text}")
+    yesbtn = kepco_messagebox_get_button(msgbox, "예")
+    yesbtn.click()
+
+    # ID: Kepco - 입찰 - 입찰서 작성 - 지문인식 투찰 버튼
+    log().info(f"Kepco - 입찰 - 입찰서 작성 - 지문인식 투찰 버튼")
+    auto_click(driver, By.XPATH, '//td[5]/div/img')
+
+    # TODO: 시간이 오래된 경우 공인인증서 확인 창이 생성된다.
+
+    # messagebox - 지문인식투찰을 진행하시겠습니까?
+    msgbox = kepco_get_messagebox(driver)
+    log().info(f"messagebox: text={msgbox.text}")
+    okbtn = kepco_messagebox_get_button(msgbox, "예")
+    okbtn.click()
+
+    # close all popup
+    log().info(f"Kepco - Common - 모든 팝업창 닫기")
+    close_all_popup(driver, timeout=15)
+
+    # ID: Kepco - 입찰 - 추첨
+    log().info(f"Kepco - Common - 추첨번호 선택")
+    boxes = auto_find_all_elements(
+        driver, By.XPATH, "//tr[3]/td/div/div/div/table/tbody/tr/td/a/span/span/span[2]")
+    boxes = random.sample(boxes, k=4)
+    for box in boxes:
+        # 4개가 모두 click이 안되는 경우가 있다.
+        # 중복된 개체가 있는 것으로 보인다.
+        time.sleep(1)
+        auto_click(driver, box)
+
+    # ID: Kepco - 입찰 - 가격입력
+    # ---------------------------
+    cost_box = wait_element(
+        driver, (By.XPATH, "//tbody/tr[4]/td/div[1]/div/div/table/tbody/tr[1]/td/div[1]"))
+
+    # input layer
+    input_layer = cost_box.find_element(By.XPATH, './/input')
+    driver.execute_script(f'arguments[0].value = "{cost}"', input_layer)
+
+    # focus
+    text_layer = cost_box.find_element(
+        By.XPATH, './/div[@class="x-form-field-inputcover-displayEl"]')
+    text_layer.click()
+
+    valid_box = wait_element(
+        driver, (By.XPATH, "//tbody/tr[4]/td/div[1]/div/div/table/tbody/tr[2]/td/div[1]"))
+
+    # input layer
+    input_layer = valid_box.find_element(By.XPATH, './/input')
+    driver.execute_script(f'arguments[0].value = "{cost}"', input_layer)
+
+    # focus
+    text_layer = valid_box.find_element(
+        By.XPATH, './/div[@class="x-form-field-inputcover-displayEl"]')
+    text_layer.click()
+
+    # focus out to temp element.
+    cost_box.click()
+
+    # 입력값 확인 버튼
+    auto_click(driver, By.XPATH, '//span[text()="입력값확인"]')
+
+    # ---------------------------
+    # ID: Kepco - 입찰 - 제출
+    # ---------------------------
+    auto_click(driver, By.XPATH, '//span[text()="제출"]')
+    msgbox = kepco_get_messagebox(driver)
+    yesbtn = kepco_messagebox_get_button(msgbox, "예")
+    yesbtn.click()
+
+    # message box - 제출되었습니다.
+    msgbox = kepco_get_messagebox(driver)
+    btn = kepco_messagebox_get_button(msgbox, "확인")
+    btn.click()
+
+# -----------------------------
 
 
 def log():
@@ -47,7 +432,29 @@ def kepco_certificate_login(driver, pw):
         auto_click(driver, By.XPATH, '//img[@src="../img/btn_confirm.png"]')
 
 
-def kepco_login(driver, id, pw, cert_pw):
+# fp_login(finger_print)
+# XXX: input token - BIO-SEAL could be changed
+def kepco_certificate_fp_login(driver):
+
+    with Frame(driver, (By.XPATH, '//iframe[contains(@src,"kica/WebUI/kepco_html/kicaCert.jsp")]'), timeout=30):
+        # select certificate location: bio-token
+        auto_click(driver, By.XPATH, '//button[text()="바이오토큰"]')
+        auto_click(driver, By.XPATH,
+                   '//*[@id="js-seltab"]/li[5]/div/ul/li/a[contains(text(), "BIO-SEAL")]')
+
+    # Need to check the result of the user action
+    res = win32api.MessageBox(None, "지문 입력이 정상적으로 끝났나요?", "Icon Automatic Agent",
+                              MB_YESNO | MB_SYSTEMMODAL)
+
+    # Result value: (예:6), (아니오:7)
+    if res == 7:
+        return False
+
+    # login as usual
+    return kepco_certificate_login(driver, "00000000")
+
+
+def kepco_login(driver, id, pw, *, cert_pw=None):
     with Frame(driver, (By.ID, "mdiiframe-1010-iframeEl")) as f:
         auto_click(driver, By.ID, 'memberLogin')
 
@@ -56,7 +463,10 @@ def kepco_login(driver, id, pw, cert_pw):
         auto_type(driver, By.ID, 'password', pw)
         auto_click(driver, By.ID, 'certBtn')
 
-    kepco_certificate_login(driver, cert_pw)
+    if cert_pw:
+        kepco_certificate_login(driver, cert_pw)
+    else:
+        kepco_certificate_fp_login(driver)
 
 
 # --------------------
@@ -92,11 +502,11 @@ def kepco_notice_close(driver: WebDriver, notice: WebElement):
 # --------------------
 
 
-def kepco_get_messagebox(driver: WebDriver):
+def kepco_get_messagebox(driver: WebDriver) -> WebElement:
     messagebox = auto_find_element(
         driver, By.XPATH, '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]')
-    auto_wait_until(lambda: kepco_messagebox_is_open(messagebox))
-    return messagebox
+    found = auto_wait_until(lambda: kepco_messagebox_is_open(messagebox))
+    return messagebox if found else None
 
 
 def kepco_messagebox_is_open(msgbox: WebElement):
@@ -199,6 +609,8 @@ def kepco_pre_search_notice_number(driver: WebDriver, number):
 def kepco_pre_is_current_registered(driver: WebDriver):
     # Validate the result
     panel = kepco_pre_get_regigteration_panel(driver)
+    if not panel:
+        raise Exception("Can not find pre registration panel")
 
     # Should wait until it shows.
     status = auto_find_element(
@@ -209,29 +621,44 @@ def kepco_pre_is_current_registered(driver: WebDriver):
         return False
 
     if status.text == "심사완료":
-        log().info("Already Registered")
+        log().info(f"Already Registered. status={status.text}")
+        return True
+
+    if status.text == "제출":
+        log().info(f"Already Registered. status={status.text}")
         return True
 
     if status.text == "미제출":
         return False
 
     log().error(f"Failed. Unkown status. status={status.text}")
-    raise Exception("Unkwon status")
+    return False
 
 
 def kepco_pre_apply_participation(driver: WebDriver):
 
     panel = kepco_pre_get_regigteration_panel(driver)
+    if not panel:
+        log().error("Failed to find a registration panel")
+        return False
 
     # check button
-    checkbox = auto_find_element(panel, By.XPATH,
-                                 "./div/div/div/div[2]/div[3]/div[2]/div/div[1]/div[2]/div/div[2]/table/tbody/tr/td/div/div")
+    checkbox = auto_find_element(
+        panel, By.XPATH, '//div[@class="x-grid-row-checker"]')
+    if not checkbox:
+        log().error("Failed to find a checkbox of the item")
+        return False
     auto_click(driver, checkbox)
+
+    # TODO: validate
 
     # Click
     register_btn = panel.find_element(By.XPATH, './/span[text()="입찰참가신청"]')
-    auto_click(driver, register_btn)
+    if not checkbox:
+        log().error("Failed to find a button of 입찰참가신청")
+        return False
 
+    auto_click(driver, register_btn)
     return True
 
 
@@ -318,9 +745,6 @@ def kepco_pre_submit_application_form(driver):
 def kepco_pre_confirm_submission(driver: WebDriver):
     messagebox = kepco_get_messagebox(driver)
 
-    # XXX: TEMP - wait
-    input("press enter to continue")
-
     auto_wait_until(lambda: kepco_messagebox_is_open(messagebox))
 
     print(f'messagebox: {kepco_messagebox_get_text(messagebox)}')
@@ -364,7 +788,9 @@ def kepco_pre_register(driver: WebDriver, number):
         return True
 
     log().info("1.4 apply")
-    kepco_pre_apply_participation(driver)
+    if not kepco_pre_apply_participation(driver):
+        log().error("Failed to apply")
+        return False
 
     # 2. Application Form
     # 2.1.  메세지등의 팝업을 처리한다.
@@ -408,14 +834,18 @@ def kepco_pre_register(driver: WebDriver, number):
     return True
 
 
+# -----------------------
+# Object Version
+# -----------------------
+
 class Kepco:
     # headless: Do not allow with headless, It will fails to login.
-    def __init__(self, id, pw, cert_pw, headless=False):
+    def __init__(self, id, pw, *, cert_pw=None, headless=False):
         log().debug("__init__")
         self.__cert_pw = cert_pw
         self.driver = kepco_create_driver(headless=headless)
         kepco_go_homepage(self.driver)
-        kepco_login(self.driver, id, pw, cert_pw)
+        kepco_login(self.driver, id, pw, cert_pw=cert_pw)
 
     def __del__(self):
         log().debug("__del__")
@@ -432,6 +862,6 @@ if __name__ == "__main__":
     id = account.account_get("kepco", "id")
     pw = account.account_get("kepco", "pw")
     cert = account.account_get("kepco", "cert")
-    kepco = Kepco(id, pw, cert)
+    kepco = Kepco(id, pw)
 
     # print(kepco.register("G012202823"))
