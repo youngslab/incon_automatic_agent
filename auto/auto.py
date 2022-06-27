@@ -2,6 +2,8 @@
 import autoit
 import logging
 import time
+import pyautogui
+
 from auto import selenium
 from plum import dispatch  # mulitple dispatch
 
@@ -77,6 +79,30 @@ def wait_all_elements(driver: WebDriver, locator: Tuple[str, str], timeout: int 
         log().error(
             f"Failed to find an element. locator={locator}, timeout={timeout}")
         return []
+
+
+@dispatch
+def wait_image(img: str, *, timeout: int = __default_timeout, grayscale: bool = True, confidence: float = .9):
+    def find_image(): return pyautogui.locateCenterOnScreen(
+        img, grayscale=grayscale, confidence=confidence)
+    return auto_wait_until(lambda: find_image(), timeout=timeout)
+
+@dispatch
+def wait_no_image(img: str, *, timeout: int = __default_timeout, grayscale: bool = True, confidence: float = .9):
+    def find_no_image(): return True if pyautogui.locateCenterOnScreen(
+        img, grayscale=grayscale, confidence=confidence) == None else False
+    return auto_wait_until(lambda: find_no_image(), timeout=timeout)
+
+@dispatch
+def wait_no_window(title: str, *, timeout=__default_timeout):
+    window = f"[TITLE:{title}]"
+    try:
+        autoit.win_wait_close(window, timeout=timeout)
+        return True
+    except:
+        log().error(f"Failed to wait a window closed. title={title}")
+        return False
+
 
 # -----------------------
 # -----------------------
@@ -171,6 +197,18 @@ def auto_click(driver: WebDriver, locator: Tuple[str, str], timeout: int = __def
 
 
 @dispatch
+def auto_click(img: str, *, timeout: int = __default_timeout, confidence: float = .9, grayscale=True):
+    center = wait_image(img, timeout=timeout,
+                        grayscale=grayscale, confidence=confidence)
+    if center is None:
+        log().error(f"Failed to find an image on the screen. img={img}")
+        return False
+
+    pyautogui.click(center)
+    return True
+
+
+@dispatch
 def auto_click(driver: WebDriver, by: str, path: str, timeout: int = __default_timeout) -> bool:
     return auto_click(driver, (by, path), timeout)
 
@@ -193,6 +231,16 @@ def auto_type(driver: WebDriver, locator: Tuple[str, str], text: str, timeout: i
 @dispatch
 def auto_type(driver: WebDriver, by: str, path: str, text: str, timeout: int = __default_timeout) -> bool:
     return auto_type(driver, (by, path), text, timeout)
+
+
+@dispatch
+def auto_type(img: str, text: str, *, timeout: int = __default_timeout, confidence: float = .9, grayscale=True):
+    if not auto_click(img, timeout=timeout, grayscale=grayscale, confidence=confidence):
+        return False
+    time.sleep(1)
+    pyautogui.typewrite(text)
+    time.sleep(1)
+    return True
 
 
 def auto_file_chooser(filepath):

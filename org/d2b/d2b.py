@@ -211,6 +211,8 @@ def _sumbit_bid(driver):
     log().info(f"accpet. alert={alert.text}")
     alert.accept()
 
+    return True
+
 # Precondition:
 #  - 입찰서제출 및 조회(경쟁입찰) 페이지 내에서 실행 되어야 한다.
 # WARNING: number format is different
@@ -291,7 +293,7 @@ def _participate_with_registration(driver, number, cost):
         log().error(f"Failed to submit a bid. number={number}, cost={cost}")
         return False
 
-    return False
+    return True
 
 
 # INTERFACE

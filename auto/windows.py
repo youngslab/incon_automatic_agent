@@ -197,6 +197,7 @@ def img_click(img, timeout=1, grayscale=True, confidence=.9):
                             grayscale=grayscale, confidence=confidence)
     if center is None:
         raise Exception(f"Can not find {img}")
+        
     pyautogui.click(center)
 
 
