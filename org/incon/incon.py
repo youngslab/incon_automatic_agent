@@ -307,9 +307,11 @@ def incon_bid_listitem_is_ready(listitem) -> bool:
 
 def incon_bid_listitem_get_price(listitem) -> int:
     price = listitem.find_element(By.XPATH, './/a[1]/div/font')
-    numbers = "".join(char for char in price.text if char.isdigit())
+    numbers = "".join(
+        char for char in price.text if char.isdigit() or char == '.')
     if numbers:
-        return int(numbers)
+        # sometime its value is float
+        return int(float(numbers))
     else:
         return 0
 

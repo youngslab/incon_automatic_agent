@@ -87,11 +87,13 @@ def wait_image(img: str, *, timeout: int = __default_timeout, grayscale: bool = 
         img, grayscale=grayscale, confidence=confidence)
     return auto_wait_until(lambda: find_image(), timeout=timeout)
 
+
 @dispatch
 def wait_no_image(img: str, *, timeout: int = __default_timeout, grayscale: bool = True, confidence: float = .9):
     def find_no_image(): return True if pyautogui.locateCenterOnScreen(
         img, grayscale=grayscale, confidence=confidence) == None else False
     return auto_wait_until(lambda: find_no_image(), timeout=timeout)
+
 
 @dispatch
 def wait_no_window(title: str, *, timeout=__default_timeout):
@@ -273,15 +275,18 @@ def auto_is_visible(element: WebElement):
 
 def auto_activate(title, *, timeout=30) -> bool:
     window = f"[TITLE:{title}]"
-    if not autoit.win_wait(window, timeout=timeout):
-        log().error(f"Failed to find a window. title={title}")
+    try:
+        autoit.win_wait(window, timeout=timeout)
+    except Exception as e:
+        log().error(f"Failed to find a window. title={title}, e={e}")
         return False
 
-    if not autoit.win_activate(window):
-        log().error(f"Failed to activate a window. title={title}")
+    try:
+        autoit.win_activate(window, timeout=timeout)
+        return True
+    except Exception as e:
+        log().error(f"Failed to activate a window. title={title}, e={e}")
         return False
-
-    return True
 
 
 def auto_go_bottom(title, *, timeout=30):

@@ -23,9 +23,122 @@ import auto.selenium
 __default_timeout = 60
 
 
-def _logger():
+def _log():
     import logging
     return logging.getLogger(__name__)
+
+
+# -------------------
+# VERSION 2
+# --------------------
+
+# ------------------------------
+# Login - Biotoken Support
+# -------------------------------
+def _go_to_login_page():
+    _log().info("try to go home.")
+    if not auto_click(resmgr.get('safeg2b_0_etc_homepage.png')):
+        _log().info("Can't go home. But it's ok. That means it's already at home")
+        return False
+    return True
+
+
+# Verify its login state at the login page
+# Precondition
+# - Should be at login_page
+def _is_login():
+    # Wait until 15sec to check the login state.
+    pos = wait_image(resmgr.get(
+        'safeg2b_login_btn.png'), grayscale=False, confidence=0.8, timeout=15)
+    return True if pos is None else False
+
+# Precondition
+#  - Only support a bio token - BIO-SEAL
+
+
+def _login_biotoken_certificate(pw):
+
+    # 1. 바이오토큰 click
+    if not auto_click(resmgr.get('certificate_login_bio_token.png')):
+        log().error("Failed to find 바이오토큰 image")
+        return False
+
+    # 2. 제조사/모델명 선택
+    success = auto_click(resmgr.get('certificate_login_bio_token_bio_seal.png'), timeout=3) \
+        or auto_click(resmgr.get('certificate_login_bio_token_bio_seal(selected).png'), timeout=3)
+    if not success:
+        log().error("Failed to find BIO-SEAL 바이오 보안토큰")
+        return False
+
+    # 3. 확인버튼
+    if not auto_click(resmgr.get('certificate_login_bio_token_device_name_selection_confirm_button.png')):
+        log().error("Failed to find 확인버튼")
+        return False
+
+    # BIO보안토큰 Window
+    # 4. password 입력
+    if not auto_type(resmgr.get('certificate_login_bio_token_password_input.png'), pw):
+        log().error("Failed to find password input box")
+        return False
+
+    # 5. 확인버튼
+    if not auto_click(resmgr.get('certificate_login_bio_token_password_confirm_button.png')):
+        log().error("Failed to find 바이오토큰 확인 버튼")
+        return False
+
+     # "제조사/모델명 선택" 윈도우가 종료될때 까지 기다린다.
+    if not wait_no_image(resmgr.get("certificate_bio_token_device_selection_program_installation_button.png"), timeout=60):
+        log().error("Failed to wait 제조사/모델명 선택 closed.")
+        return False
+
+    # 인증서 확인 버튼
+    if not auto_click(resmgr.get('certificate_password_confirm_button.png')):
+        log().error("Failed to find confirm_button.")
+        return False
+
+    # "인증서 선택" 윈도우가 종료될때 까지 기다린다.
+    if not wait_no_window("인증서 선택"):
+        log().error("Failed to wait 인증서 선택.")
+        return False
+
+    return True
+
+# Precondition
+#  - login page
+#  - biotoken's pin number is "00000000"
+
+
+def _login_biotoken():
+    pw = "00000000"
+
+    if not auto_activate("나라장터: 국가종합전자조달 - SafeG2B", timeout=60):
+        log().error("SAFEG2B Window is not Activated")
+        return False
+
+    if _is_login():
+        log().info("Already logged in.")
+        return True
+
+    # 2. login button
+    log().info("login) 2. 로그인 버튼 ")
+    if not auto_click(resmgr.get('safeg2b_login_btn.png')):
+        log().error("Failed to find 로그인 버튼")
+        return False
+
+    # 3. Certifiate Login
+    if not _login_biotoken_certificate(pw):
+        log().error("Failed to log in with a bio token.")
+        return False
+
+    # 7. Validate Login
+    if not wait_image(resmgr.get('safeg2b_my_menu.png'), timeout=20):
+        log().error("Failed to verify login result.")
+        return False
+
+    return True
+
+# ----------------------------------------
+
 
 # -------------------------------
 # Execution APIs
@@ -49,16 +162,16 @@ def safeg2b_is_running():
 
 def safeg2b_run():
     if safeg2b_is_running():
-        _logger().info("SafeG2B is already running")
+        _log().info("SafeG2B is already running")
         return
 
     if not ctypes.windll.shell32.IsUserAnAdmin():
-        _logger().info("Need privileged permission. Elevate.")
+        _log().info("Need privileged permission. Elevate.")
         elevate.elevate(show_console=False)
 
     filename = safeg2b_get_exe_filename()
     directory = safeg2b_get_exe_directory()
-    _logger().info("Start SafeG2B.")
+    _log().info("Start SafeG2B.")
     os.system(f"cd {directory} && start {os.path.join(directory, filename)}")
 
 # -------------------------------
@@ -92,82 +205,6 @@ def safeg2b_window_message_confirm():
 # Log In APIs
 # ---------------------------
 
-
-def safeg2b_go_to_login_page():
-    try:
-        _logger().info("try to go home.")
-        auto.windows.img_click(resmgr.get('safeg2b_0_etc_homepage.png'))
-    except Exception as _:
-        _logger().info("Can't go home. But it's ok. That means it's already at home")
-        pass
-
-
-def safeg2b_is_login():
-    # Wait until 15sec to check the login state.
-    pos = auto.windows.img_wait_until(resmgr.get(
-        'safeg2b_login_btn.png'), grayscale=False, confidence=0.8, timeout=15)
-    return True if pos is None else False
-
-
-def safeg2b_certificate_login(pw):
-    org.g2b.certificate.cert_login(pw)
-
-
-def safeg2b_login(pw: str, id):
-    if safeg2b_is_login():
-        _logger().info("Already logged in.")
-        return
-
-    if not auto_activate(safeg2b_get_window_title()):
-        raise Exception("SAFEG2B Window is not Activated")
-
-    # login)  check box
-    _logger().info("login) 1. 지문 예외 check box ")
-    auto.windows.img_click(resmgr.get(
-        'safeg2b_finger_print_exception_checkbox.png'), timeout=__default_timeout)
-
-    # 2. login button
-    _logger().info("login) 2. 로그인 버튼 ")
-    auto.windows.img_click(resmgr.get('safeg2b_login_btn.png'))
-
-    # 3. waiting for the page movement and then click
-    _logger().info("login) 3. 지문 예외 확인 ")
-    auto.windows.img_click(resmgr.get(
-        'safeg2b_finger_print_exception_confirm_button.png'), timeout=__default_timeout)
-
-    # 4. 인증서 로그인
-    _logger().info("login) 4. 인증서 로그인")
-    safeg2b_certificate_login(pw)
-
-    _logger().info("login) 5. 주민번호 입력")
-
-    # 6. Waiting for the id page
-    # auto.windows.bring_window_to_top(handle)
-    if not auto_activate(safeg2b_get_window_title()):
-        raise Exception("SAFEG2B Window is not Activated")
-
-    # 7. Focus input for id and type
-    auto.windows.img_type(resmgr.get('safeg2b_id_front_number_input.png'),
-                          f"{id.split('-')[0]}{id.split('-')[1]}", timeout=__default_timeout)
-    # when second part got focused automatically, the image going to be changed so that it is hightlighted.
-    # auto.windows.img_type(resmgr.get('safeg2b_id_back_number_input.png'), id.split('-')[1])
-    auto.windows.img_click(resmgr.get(
-        'safeg2b_id_confirm_button.png'), timeout=__default_timeout)
-
-    # 9. 인증서 로그인(개인)
-    # market.certificate.cert_personal_user_login(pw)
-    _logger().info("login) 6. 인증서 로그인")
-    safeg2b_certificate_login(pw)
-
-    # 10. 메세지 확인 - 예외 적용자 로그인
-    _logger().info("login) 7. 메세지 확인 - 예외 적용자 로그인")
-    safeg2b_window_message_confirm()
-
-    _logger().info("login) 8. 로그인 확인 - MY BID CENTER")
-    success = safeg2b_login_validate()
-    if not success:
-        _logger().error("Failed to login safeg2b")
-    return success
 
 # ---------------------------
 # Participation APIs
@@ -243,7 +280,7 @@ def safeg2b_participate_2_8_bid_lottery_number():
         "safeg2b_2_8_lottery_number_checkbox.png"))
     boxes = random.sample(boxes, 2)
     for box in boxes:
-        _logger().debug(f"click a check button. box id={box}")
+        _log().debug(f"click a check button. box id={box}")
         auto.windows.click(*box)
 
     # click buttons
@@ -264,7 +301,8 @@ def safeg2b_participate_2_9_certificate(pw):
 
 
 def safeg2b_participate_2_10_alert_confirm():
-    auto.windows.window_select("나라장터")
+    auto_activate("나라장터")
+    # auto.windows.window_select("나라장터")
     auto.windows.img_click(resmgr.get(
         'safeg2b_2_9_confirm_button.png'), timeout=__default_timeout)
 
@@ -287,61 +325,61 @@ def safeg2b_participate(notice_no: str, price: str):
     if not auto_activate(safeg2b_get_window_title(), timeout=__default_timeout):
         raise Exception("SAFEG2B Window is not Activated")
 
-    _logger().info("2.1 bid_info (New Page)")
+    _log().info("2.1 bid_info (New Page)")
     auto.windows.img_click(resmgr.get(
         'safeg2b_bid_bid_info_button.png'), timeout=__default_timeout)
 
-    _logger().info("2.2 search ")
+    _log().info("2.2 search ")
     auto.windows.img_type(resmgr.get(
         'safeg2b_bid_search_input.png'), notice_no, timeout=__default_timeout)
     auto.windows.img_click(resmgr.get(
         'safeg2b_bid_search_button.png'), timeout=__default_timeout)
 
-    _logger().info("2.3 bid participate")
+    _log().info("2.3 bid participate")
     if not auto_activate(safeg2b_get_window_title()):
         raise Exception("SAFEG2B Window is not Activated")
     auto.windows.img_click(resmgr.get(
         "safeg2b_2_3_bid_finger_print_button.png"), timeout=__default_timeout)
 
-    _logger().info("2.4 bid participate(2)")
+    _log().info("2.4 bid participate(2)")
     safeg2b_participate_2_4_bid_participate()
 
-    _logger().info("2.5 투찰 공지사항")
+    _log().info("2.5 투찰 공지사항")
     safeg2b_participate_2_5_bid_notice()
 
-    _logger().info("2.6 물품구매입찰서")
+    _log().info("2.6 물품구매입찰서")
     safeg2b_participate_2_6_bid_doc(price)
 
-    _logger().info("2.7 투찰금액확인")
+    _log().info("2.7 투찰금액확인")
     safeg2b_participate_2_7_bid_price_confirmation()
 
-    _logger().info("2.8 추첨번호 선택")
+    _log().info("2.8 추첨번호 선택")
     safeg2b_participate_2_8_bid_lottery_number()
 
-    # _logger().info("2.9 인증서 ")
+    # _log().info("2.9 인증서 ")
     # safeg2b_participate_2_9_certificate(pw)
 
-    _logger().info("2.10 알림 확인")
+    _log().info("2.10 알림 확인")
     safeg2b_participate_2_10_alert_confirm()
 
-    _logger().info("2.11 전자입찰 송수신상세이력조회 - SafeG2B")
+    _log().info("2.11 전자입찰 송수신상세이력조회 - SafeG2B")
     safeg2b_participate_2_11_history_check()
 
     # Optional
-    # _logger().info("2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
+    # _log().info("2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
     # safeg2b_participate_2_12_survery()
 
 
 def safeg2b_initialize():
     if not auto_activate(safeg2b_get_window_title(), timeout=100):
         raise Exception("SAFEG2B Window is not Activated")
-    safeg2b_go_to_login_page()
+    _go_to_login_page()
 
 
 def safeg2b_close() -> bool:
     title = safeg2b_get_window_title()
     hwnd = auto.windows.window_find_exact(title)
-    _logger().info(f"Close SafeG2B window={hwnd}")
+    _log().info(f"Close SafeG2B window={hwnd}")
     return auto.windows.window_close(hwnd)
 
 
@@ -351,9 +389,26 @@ def safeg2b_login_validate():
     return False if pos is None else True
 
 
-def test_validate_login():
+class SafeG2B:
+    def __init__(self, *, close_windows=True):
+        self.__close_windows = close_windows
 
-    print(safeg2b_login_validate())
+        # safe g2b
+        safeg2b_run()
+        safeg2b_initialize()
+        if not _login_biotoken():
+            raise Exception("Failed to login to safeg2b")
+
+    def __del__(self):
+        if self.__close_windows:
+            safeg2b_close()
+
+    def participate(self, bid):
+        _log().info(f"participate in {bid.number} price={bid.price}")
+        if not safeg2b_is_running():
+            return False, "safeg2b instance is not running"
+        safeg2b_participate(bid.number, str(bid.price))
+        return True, None
 
 
 if __name__ == '__main__':
@@ -371,4 +426,5 @@ if __name__ == '__main__':
     # time.sleep(5)
     # safeg2b_participate( pw, notice_number, price)
 
-    test_validate_login()
+    # test_validate_login()
+    pass

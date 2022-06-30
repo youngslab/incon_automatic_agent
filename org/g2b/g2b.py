@@ -4,6 +4,7 @@ import auto.selenium
 import auto.windows
 
 from org.g2b.safeg2b import *
+from org.g2b import safeg2b
 
 
 def logger():
@@ -153,30 +154,6 @@ class G2B:
         return self.__register(product_numbers)
 
 
-class SafeG2B:
-    def __init__(self, pw, rn, close_windows=True):
-        self.__pw = pw
-        self.__close_windows = close_windows
-
-        # safe g2b
-        safeg2b_run()
-        safeg2b_initialize()
-        success = safeg2b_login(pw, rn)
-        if not success:
-            raise Exception("Failed to login to safeg2b")
-
-    def __del__(self):
-        if self.__close_windows:
-            safeg2b_close()
-
-    def participate(self, bid):
-        logger().info(f"participate in {bid.number} price={bid.price}")
-        if not safeg2b_is_running():
-            return False, "safeg2b instance is not running"
-        safeg2b_participate(self.__pw, bid.number, str(bid.price))
-        return True, None
-
-
 class G2B__:
     def __init__(self, pw, rn, close_windows=True, headless=True):
         logger().debug("__init__")
@@ -190,15 +167,14 @@ class G2B__:
         # safe g2b
         safeg2b_run()
         safeg2b_initialize()
-        success = safeg2b_login(pw, rn)
-        if not success:
+        if not safeg2b._login_biotoken():
             raise Exception("Failed to login to safeg2b")
 
     def __del__(self):
         logger().debug("__del__")
-        if self.__close_windows:
-            safeg2b_close()
-            self.__driver.close()
+        # if self.__close_windows:
+        #     safeg2b_close()
+        #     self.__driver.close()
 
     def __register(self, pns):
         return g2b_register(self.__driver, pns)
@@ -219,7 +195,7 @@ class G2B__:
 
 if __name__ == "__main__":
     from account import account_get
-    pw = account_get("g2b", "pw")
+    pw = account_get("g2b", "pw") 
     rn = account_get("g2b", "rn")
     obj = G2B(pw, rn)
 

@@ -25,25 +25,25 @@ def create_data_provider():
     return Incon(id, pw)
 
 
-def create_markets() -> dict:
-    markets = dict()
+# def create_bid_markets() -> dict:
+#     markets = dict()
 
-    pw = account_get("g2b", "pw")
-    rn = account_get("g2b", "rn")
-    markets['나라장터'] = G2B(pw, rn)
+#     pw = account_get("g2b", "pw")
+#     rn = account_get("g2b", "rn")
+#     markets['나라장터'] = G2B(pw, rn, headless=False)
 
-    kepco_id = account_get("kepco", "id")
-    kepco_pw = account_get("kepco", "pw")
-    kepco_cert = account_get("kepco", "cert")
-    markets['한국전력'] = Kepco(kepco_id, kepco_pw, kepco_cert)
+#     kepco_id = account_get("kepco", "id")
+#     kepco_pw = account_get("kepco", "pw")
+#     kepco_cert = account_get("kepco", "cert")
+#     markets['한국전력'] = Kepco(kepco_id, kepco_pw, kepco_cert)
 
-    d2b_id = account_get("d2b", "id")
-    d2b_pw = account_get("d2b", "pw")
-    d2b_user = account_get("d2b", "user")
-    d2b_cert = account_get("d2b", "cert")
-    markets['국방전자조달'] = D2B(d2b_id, d2b_pw, d2b_user, d2b_cert)
+#     d2b_id = account_get("d2b", "id")
+#     d2b_pw = account_get("d2b", "pw")
+#     d2b_user = account_get("d2b", "user")
+#     d2b_cert = account_get("d2b", "cert")
+#     markets['국방전자조달'] = D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
 
-    return markets
+#     return markets
 
 
 __pre_markets = dict()
@@ -52,18 +52,20 @@ __pre_markets = dict()
 def create_pre_market(market: str):
     if market == "나라장터":
         pw = account_get("g2b", "pw")
-        return G2B(pw)
+        return G2B(pw, headless=False)
     elif market == "한국전력":
         kepco_id = account_get("kepco", "id")
         kepco_pw = account_get("kepco", "pw")
-        kepco_cert = account_get("kepco", "cert")
-        return Kepco(kepco_id, kepco_pw, kepco_cert)
+        # kepco_cert = account_get("kepco", "cert")
+        # return Kepco(kepco_id, kepco_pw, kepco_cert)
+        # login to support
+        return Kepco(kepco_id, kepco_pw)
     elif market == "국방전자조달":
         d2b_id = account_get("d2b", "id")
         d2b_pw = account_get("d2b", "pw")
         d2b_user = account_get("d2b", "user")
         d2b_cert = account_get("d2b", "cert")
-        return D2B(d2b_id, d2b_pw, d2b_user, d2b_cert)
+        return D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
     else:
         return None
 
@@ -81,23 +83,23 @@ def get_pre_market(market: str):
 __markets = dict()
 
 
-def get_market(market: str):
+def get_bid_market(market: str):
     res = __markets.get(market)
     if res:
         return res
     else:
-        obj = create_market(market)
+        obj = create_bid_market(market)
         __markets[market] = obj
         return obj
 
 
-def create_market(market: str):
+def create_bid_market(market: str):
     if market == "나라장터":
-        pw = account_get("g2b", "pw")
-        rn = account_get("g2b", "rn")
-        return SafeG2B(pw, rn)
+        # pw = account_get("g2b", "pw")
+        # rn = account_get("g2b", "rn")
+        return SafeG2B()
     else:
-        return None
+        return get_pre_market(market)
 
 
 def iaa_get_config_directory():
@@ -113,11 +115,21 @@ def log():
 
 def main():
     dp = create_data_provider()
-    # ms = create_markets()
+    # ms = create_bid_markets()
+
+    # create markets in advance.
+    bids = dp.get_bid_data()
+    for bid in bids:
+        if not bid.is_completed():
+            _ = get_bid_market(bid.market)
+
+    pres = dp.get_pre_data()
+    for pre in pres:
+        if not pre.is_completed():
+            _ = get_pre_market(pre.market)
 
     if settings_enable_pres:
         log().info("Start pre market business.")
-        pres = dp.get_pre_data()
         for pre in pres:
             log().info(f"Try to register pre. pre={pre}")
 
@@ -144,7 +156,6 @@ def main():
 
     if settings_enable_bids:
         log().info("Start bid market business.")
-        bids = dp.get_bid_data()
         for bid in bids:
 
             log().info(f"Register a bid. bid={bid}")
@@ -157,15 +168,15 @@ def main():
                 log().info(f"Skip. Not ready.")
                 continue
 
-            market = get_market(bid.market)
+            market = get_bid_market(bid.market)
             if not market:
                 log().info(f"Skip. Market is not supported.")
                 continue
 
-            success, message = market.participate(bid)
+            success = market.participate(bid)
 
             if not success:
-                log().warning(f"Failed to register. message={message}")
+                log().warning(f"Failed to register.")
                 continue
 
             bid.complete()
@@ -174,7 +185,8 @@ def main():
 
 if __name__ == "__main__":
     # logger setup
-    logger_init(basedir=iaa_get_config_directory())
+    # logger_init(basedir=iaa_get_config_directory())
+    logger_init()
 
     try:
         main()

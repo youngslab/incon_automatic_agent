@@ -298,7 +298,7 @@ def _participate_with_registration(driver, number, cost):
 
 # INTERFACE
 
-def login(driver: WebDriver, token='BIO-SEAL') -> bool:
+def _login(driver: WebDriver, token='BIO-SEAL') -> bool:
     driver.get("https://www.d2b.go.kr/index.do")
 
     if _is_login(driver):
@@ -360,7 +360,7 @@ def login(driver: WebDriver, token='BIO-SEAL') -> bool:
         auto_click(driver, button)
 
 
-def register(driver: WebDriver, number, user, cert_pw):
+def _register_v2(driver: WebDriver, number, user, cert_pw):
     # move to the page to register
     driver.get('https://www.d2b.go.kr/index.do')
     # type number and click search button
@@ -435,7 +435,7 @@ def register(driver: WebDriver, number, user, cert_pw):
     return True
 
 
-def participate(driver, number, cost):
+def _participate_v2(driver, number, cost):
     if not _need_registration(driver, number):
         return _participate_without_registration(driver, number, cost)
     else:
@@ -583,13 +583,17 @@ class D2B:
         # go homepage
         self.driver.get("https://www.d2b.go.kr/index.do")
 
-        d2b_login(self.driver, user, id, pw, cert_pw)
+        _login(self.driver)
+        # d2b_login(self.driver, user, id, pw, cert_pw)
 
     def register(self, pre):
-        return d2b_register(self.driver,  pre.number, self.__user, self.__cert_pw)
+
+        # return d2b_register(self.driver,  pre.number, self.__user, self.__cert_pw)
+        return _register_v2(self.driver, pre.number, self.__user, self.__cert_pw)
+        # return _register(driver, number, user)
 
     def participate(self, bid):
-        return False, "D2B Not implemented yet"
+        return _participate_v2(self.driver, bid.number, str(bid.price))
 
 
 if __name__ == "__main__":

@@ -32,9 +32,10 @@ def close_all_popup(driver, timeout=10):
         #  - 낙찰 후 미계약 건에 대한 공지         - 확인
         #  - 변경 미등록시 입찰무효처리에 대한 공지 - 확인
         messagebox = kepco_get_messagebox(driver)
-        if kepco_messagebox_is_open(messagebox):
-            confirm_btn = kepco_messagebox_get_button(messagebox, "확인")
-            auto_click(driver, confirm_btn)
+        if messagebox:
+            if kepco_messagebox_is_open(messagebox):
+                confirm_btn = kepco_messagebox_get_button(messagebox, "확인")
+                auto_click(driver, confirm_btn)
 
         # multiple notices
         notices = kepco_get_notices(driver)
@@ -164,12 +165,14 @@ def login(driver: WebDriver, id, pw, cert):
     kepco_login(driver, id, pw, cert)
 
 
-def register(driver: WebDriver, number, *, cert=None):
+def _register_v2(driver: WebDriver, number, *, cert=None):
 
     # close_all_tab
+    log().info("0. 모든 탭 닫기")
     close_all_tab(driver)
 
     # # 1. 공고번호 조회
+    log().info("1. 공고번호 조회 tab 열기")
     if not open_register_tab(driver):
         log().error("Failed to open register tab.")
 
@@ -273,7 +276,7 @@ def validate_bid_search_result(driver: WebDriver, number):
     return True
 
 
-def participate(driver, number, cost):
+def _participate_v2(driver, number, cost):
     # close all tabs
     close_all_tab(driver)
 
@@ -502,10 +505,11 @@ def kepco_notice_close(driver: WebDriver, notice: WebElement):
 # --------------------
 
 
-def kepco_get_messagebox(driver: WebDriver) -> WebElement:
+def kepco_get_messagebox(driver: WebDriver, timeout=60) -> WebElement:
     messagebox = auto_find_element(
         driver, By.XPATH, '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]')
-    found = auto_wait_until(lambda: kepco_messagebox_is_open(messagebox))
+    found = auto_wait_until(
+        lambda: kepco_messagebox_is_open(messagebox), timeout=timeout)
     return messagebox if found else None
 
 
@@ -685,6 +689,13 @@ def kepco_pre_close_popup(driver, timeout=10):
             if kepco_notice_is_open(notice):
                 kepco_notice_close(driver, notice)
 
+        #  한국서부발전 "닫기" 버튼 -
+        close_buttons = auto_find_all_elements(
+            driver, By.XPATH, '//div/div[3]/div/div/a/span/span/span[2 and text()="닫기"]')
+        for btn in close_buttons:
+            if btn.is_display():
+                auto_click(driver, btn)
+
         curr = time.time() - start
         if curr > timeout:
             break
@@ -763,11 +774,23 @@ def kepco_pre_confirm_submission(driver: WebDriver):
 
 
 def kepco_pre_confirm_done(driver: WebDriver):
-    messagebox = kepco_get_messagebox(driver)
+    # message box 생성되는데 시간이 오래 걸린다.
+    #     => 60초 정도 대기하는 것으로 변경.
+    messagebox = kepco_get_messagebox(driver, timeout=60)
+    if not messagebox:
+        log().error("Failed to find Message Box")
+        return False
+
     button = kepco_messagebox_get_button(messagebox, "확인")
     if not button:
-        raise Exception("Failed to find 확인 buttons")
-    auto_click(driver, button)
+        log().error("Failed to find 확인 buttons")
+        return False
+
+    if not auto_click(driver, button):
+        log().error("Failed to click 확인 buttons")
+        return False
+
+    return True
 
 
 def kepco_pre_register(driver: WebDriver, number):
@@ -849,13 +872,14 @@ class Kepco:
 
     def __del__(self):
         log().debug("__del__")
-        # self.driver.close()
+        self.driver.close()
 
     def register(self, pre):
-        return kepco_pre_register(self.driver, pre.number)
+        return _register_v2(self.driver, pre.number)
 
     def participate(self, bid):
-        return False, "Kepco Not implemented yet"
+        log().info(f"participate in {bid.number} price={bid.price}")
+        return _participate_v2(self.driver, bid.number, str(bid.price))
 
 
 if __name__ == "__main__":
