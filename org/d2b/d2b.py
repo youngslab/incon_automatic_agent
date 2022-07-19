@@ -254,7 +254,7 @@ def _go_to_bid_write_page(driver, number):
         return False
 
     # 페이지내 관련 공고 선택
-    if not choose_bid_in_list(driver, number[4:11]):
+    if not choose_bid_in_list(driver, number):
         log().error(f"Failed to go to the bid page")
         return False
 
@@ -270,7 +270,7 @@ def _participate_with_registration(driver, number, cost):
     # validate it's ready
     # WARNING: number format is different
     # ID: D2b - 입찰(참가신청) - 참가가능 검증
-    if not _can_participate(driver, number[4:11]):
+    if not _can_participate(driver, number):
         log().error(
             f"Failed to validate the bid. number={number}, cost={cost}")
         return False
@@ -435,7 +435,24 @@ def _register_v2(driver: WebDriver, number, user, cert_pw):
     return True
 
 
+
+
 def _participate_v2(driver, number, cost):
+    def is_alpha(c):
+        try:
+            return c.encode('ascii').isalpha()
+        except:
+            return False
+
+    def remove_prefix(number):
+        while not is_alpha(number[0]):
+            number = number[1:]
+        return number
+
+    # clear pre/postfix
+    number = remove_prefix(number)
+    number = number[:7]           
+    
     if not _need_registration(driver, number):
         return _participate_without_registration(driver, number, cost)
     else:

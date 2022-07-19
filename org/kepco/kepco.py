@@ -507,7 +507,7 @@ def kepco_notice_close(driver: WebDriver, notice: WebElement):
 
 def kepco_get_messagebox(driver: WebDriver, timeout=60) -> WebElement:
     messagebox = auto_find_element(
-        driver, By.XPATH, '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]')
+        driver, By.XPATH, '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]', timeout=timeout)
     found = auto_wait_until(
         lambda: kepco_messagebox_is_open(messagebox), timeout=timeout)
     return messagebox if found else None
@@ -614,12 +614,12 @@ def kepco_pre_is_current_registered(driver: WebDriver):
     # Validate the result
     panel = kepco_pre_get_regigteration_panel(driver)
     if not panel:
-        raise Exception("Can not find pre registration panel")
+        log().error("Failed to find registration panel.")
+        return False
 
     # Should wait until it shows.
     status = auto_find_element(
         panel, By.XPATH, ".//div[1]/div[1]/div[1]/div[2]/div[3]/div[2]/div[1]/div[2]/div[2]/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[3]/div[1]")
-
     if not status:
         log().error("Failed to get status column.")
         return False
@@ -678,20 +678,20 @@ def kepco_pre_close_popup(driver, timeout=10):
         # messagebox
         #  - 낙찰 후 미계약 건에 대한 공지         - 확인
         #  - 변경 미등록시 입찰무효처리에 대한 공지 - 확인
-        messagebox = kepco_get_messagebox(driver)
+        messagebox = kepco_get_messagebox(driver, timeout=1)
         if kepco_messagebox_is_open(messagebox):
             confirm_btn = kepco_messagebox_get_button(messagebox, "확인")
             auto_click(driver, confirm_btn)
 
         # multiple notices
-        notices = kepco_get_notices(driver)
+        notices = kepco_get_notices(driver)  # no wait Apis
         for notice in notices:
             if kepco_notice_is_open(notice):
                 kepco_notice_close(driver, notice)
 
         #  한국서부발전 "닫기" 버튼 -
         close_buttons = auto_find_all_elements(
-            driver, By.XPATH, '//div/div[3]/div/div/a/span/span/span[2 and text()="닫기"]')
+            driver, By.XPATH, '//div/div[3]/div/div/a/span/span/span[2 and text()="닫기"]', timeout=1)
         for btn in close_buttons:
             if btn.is_display():
                 auto_click(driver, btn)

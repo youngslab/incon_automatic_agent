@@ -163,7 +163,10 @@ def auto_find_element(element: WebElement, by: str, path: str, timeout: int = __
     def _find():
         xs = element.find_elements(by, path)
         return xs[0] if len(xs) > 0 else None
-    return auto_wait_until(lambda: _find())
+    try:
+        return auto_wait_until(lambda: _find(), timeout=timeout)
+    except:
+        return None
 
 
 @dispatch

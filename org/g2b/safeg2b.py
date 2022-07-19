@@ -59,7 +59,7 @@ def _is_login():
 def _login_biotoken_certificate(pw):
 
     # 1. 바이오토큰 click
-    if not auto_click(resmgr.get('certificate_login_bio_token.png')):
+    if not auto_click(resmgr.get('certificate_login_bio_token.png'), timeout=60):
         log().error("Failed to find 바이오토큰 image")
         return False
 
@@ -220,7 +220,8 @@ def safeg2b_participate_2_4_bid_participate():
 def safeg2b_participate_2_5_bid_notice():
     title = "투찰 공지사항 - SafeG2B"
     if not auto_activate(title, timeout=__default_timeout):
-        raise Exception(f"A Window is not Activated. title={title}")
+        log().error(f"A Window is not Activated. title={title}")
+        return False
 
     # After bring a window to top, It takes not niggrigible time.
     auto.windows.wait_until_image(resmgr.get(
@@ -236,6 +237,8 @@ def safeg2b_participate_2_5_bid_notice():
 
     auto.windows.img_click(resmgr.get(
         'safeg2b_2_5_bid_notice_confirm_button.png'))
+
+    return True
 
 
 def safeg2b_participate_2_6_bid_doc(price):
@@ -323,7 +326,8 @@ def safeg2b_participate_2_12_survery():
 
 def safeg2b_participate(notice_no: str, price: str):
     if not auto_activate(safeg2b_get_window_title(), timeout=__default_timeout):
-        raise Exception("SAFEG2B Window is not Activated")
+        _log().error("SAFEG2B Window is not Activated")
+        return False
 
     _log().info("2.1 bid_info (New Page)")
     auto.windows.img_click(resmgr.get(
@@ -337,7 +341,9 @@ def safeg2b_participate(notice_no: str, price: str):
 
     _log().info("2.3 bid participate")
     if not auto_activate(safeg2b_get_window_title()):
-        raise Exception("SAFEG2B Window is not Activated")
+        _log().error("SAFEG2B Window is not Activated")
+        return False
+
     auto.windows.img_click(resmgr.get(
         "safeg2b_2_3_bid_finger_print_button.png"), timeout=__default_timeout)
 
@@ -345,7 +351,9 @@ def safeg2b_participate(notice_no: str, price: str):
     safeg2b_participate_2_4_bid_participate()
 
     _log().info("2.5 투찰 공지사항")
-    safeg2b_participate_2_5_bid_notice()
+    if not safeg2b_participate_2_5_bid_notice():
+        _log().error("Failed to proceed 투찰 공지사항. 물품등록이 안되었거나, 등록기한이 지난경우일 가능성이 있습니다.")
+        return False
 
     _log().info("2.6 물품구매입찰서")
     safeg2b_participate_2_6_bid_doc(price)
@@ -407,8 +415,7 @@ class SafeG2B:
         _log().info(f"participate in {bid.number} price={bid.price}")
         if not safeg2b_is_running():
             return False, "safeg2b instance is not running"
-        safeg2b_participate(bid.number, str(bid.price))
-        return True, None
+        return safeg2b_participate(bid.number, str(bid.price)), None
 
 
 if __name__ == '__main__':

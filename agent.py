@@ -53,13 +53,11 @@ def create_pre_market(market: str):
     if market == "나라장터":
         pw = account_get("g2b", "pw")
         return G2B(pw, headless=False)
-    elif market == "한국전력":
-        kepco_id = account_get("kepco", "id")
-        kepco_pw = account_get("kepco", "pw")
-        # kepco_cert = account_get("kepco", "cert")
-        # return Kepco(kepco_id, kepco_pw, kepco_cert)
-        # login to support
-        return Kepco(kepco_id, kepco_pw)
+    # elif market == "한국전력":
+    #     kepco_id = account_get("kepco", "id")
+    #     kepco_pw = account_get("kepco", "pw")        
+    #     # login to support
+    #     return Kepco(kepco_id, kepco_pw)
     elif market == "국방전자조달":
         d2b_id = account_get("d2b", "id")
         d2b_pw = account_get("d2b", "pw")
@@ -130,6 +128,7 @@ def main():
 
     if settings_enable_pres:
         log().info("Start pre market business.")
+        pres = dp.get_pre_data()
         for pre in pres:
             log().info(f"Try to register pre. pre={pre}")
 
@@ -156,6 +155,7 @@ def main():
 
     if settings_enable_bids:
         log().info("Start bid market business.")
+        bids = dp.get_bid_data()
         for bid in bids:
 
             log().info(f"Register a bid. bid={bid}")
