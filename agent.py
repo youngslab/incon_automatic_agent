@@ -17,6 +17,13 @@ from logger import logger_init
 settings_enable_pres = True
 settings_enable_bids = True
 
+__pre_markets = dict()
+
+# To skip some market
+# _market_filter = ['한국전력']
+# _market_filter = ['나라장터']
+_market_filter = []
+
 
 def create_data_provider():
     # create incon object
@@ -25,39 +32,18 @@ def create_data_provider():
     return Incon(id, pw)
 
 
-# def create_bid_markets() -> dict:
-#     markets = dict()
-
-#     pw = account_get("g2b", "pw")
-#     rn = account_get("g2b", "rn")
-#     markets['나라장터'] = G2B(pw, rn, headless=False)
-
-#     kepco_id = account_get("kepco", "id")
-#     kepco_pw = account_get("kepco", "pw")
-#     kepco_cert = account_get("kepco", "cert")
-#     markets['한국전력'] = Kepco(kepco_id, kepco_pw, kepco_cert)
-
-#     d2b_id = account_get("d2b", "id")
-#     d2b_pw = account_get("d2b", "pw")
-#     d2b_user = account_get("d2b", "user")
-#     d2b_cert = account_get("d2b", "cert")
-#     markets['국방전자조달'] = D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
-
-#     return markets
-
-
-__pre_markets = dict()
-
-
 def create_pre_market(market: str):
+    if market in _market_filter:
+        return None
+
     if market == "나라장터":
         pw = account_get("g2b", "pw")
         return G2B(pw, headless=False)
-    # elif market == "한국전력":
-    #     kepco_id = account_get("kepco", "id")
-    #     kepco_pw = account_get("kepco", "pw")        
-    #     # login to support
-    #     return Kepco(kepco_id, kepco_pw)
+    elif market == "한국전력":
+        kepco_id = account_get("kepco", "id")
+        kepco_pw = account_get("kepco", "pw")
+        # login to support
+        return Kepco(kepco_id, kepco_pw)
     elif market == "국방전자조달":
         d2b_id = account_get("d2b", "id")
         d2b_pw = account_get("d2b", "pw")
@@ -82,6 +68,10 @@ __markets = dict()
 
 
 def get_bid_market(market: str):
+
+    if market in _market_filter:
+        return None
+
     res = __markets.get(market)
     if res:
         return res
@@ -92,9 +82,9 @@ def get_bid_market(market: str):
 
 
 def create_bid_market(market: str):
+    if market in _market_filter:
+        return None
     if market == "나라장터":
-        # pw = account_get("g2b", "pw")
-        # rn = account_get("g2b", "rn")
         return SafeG2B()
     else:
         return get_pre_market(market)
@@ -113,22 +103,22 @@ def log():
 
 def main():
     dp = create_data_provider()
-    # ms = create_bid_markets()
-
-    # create markets in advance.
-    bids = dp.get_bid_data()
-    for bid in bids:
-        if not bid.is_completed():
-            _ = get_bid_market(bid.market)
 
     pres = dp.get_pre_data()
     for pre in pres:
         if not pre.is_completed():
             _ = get_pre_market(pre.market)
 
+    # create markets in advance.
+    bids = dp.get_bid_data()
+    for bid in bids:
+        if not bid.is_completed() and bid.is_ready:
+            _ = get_bid_market(bid.market)
+
     if settings_enable_pres:
         log().info("Start pre market business.")
         pres = dp.get_pre_data()
+
         for pre in pres:
             log().info(f"Try to register pre. pre={pre}")
 

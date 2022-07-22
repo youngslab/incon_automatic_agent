@@ -35,7 +35,7 @@ __default_timeout = 10
 
 
 @dispatch
-def wait_clickable(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> WebElement:
+def wait_clickable(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> Union[WebElement, None]:
     try:
         return WebDriverWait(driver, timeout).until(
             EC.element_to_be_clickable(locator))
@@ -62,7 +62,7 @@ def wait_no_element(driver: WebDriver, locator: Tuple[str, str], timeout: int = 
 
 
 @dispatch
-def wait_element(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> WebElement:
+def wait_element(driver: WebDriver, locator: Tuple[str, str], timeout: int = __default_timeout) -> Union[WebElement, None]:
     try:
         return WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located(locator))
@@ -159,7 +159,7 @@ def auto_find_element(driver: WebDriver, by: str, path: str, timeout: int = __de
 
 
 @dispatch
-def auto_find_element(element: WebElement, by: str, path: str, timeout: int = __default_timeout) -> WebElement:
+def auto_find_element(element: WebElement, by: str, path: str, timeout: int = __default_timeout) -> Union[WebElement, None]:
     def _find():
         xs = element.find_elements(by, path)
         return xs[0] if len(xs) > 0 else None

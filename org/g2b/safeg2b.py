@@ -35,6 +35,7 @@ def _log():
 # ------------------------------
 # Login - Biotoken Support
 # -------------------------------
+
 def _go_to_login_page():
     _log().info("try to go home.")
     if not auto_click(resmgr.get('safeg2b_0_etc_homepage.png')):
@@ -212,12 +213,20 @@ def safeg2b_window_message_confirm():
 
 
 def safeg2b_participate_2_4_bid_participate():
-    auto.windows.window_select("물품공고분류조회 - SafeG2B")
-    auto.windows.img_click(resmgr.get(
-        "safeg2b_2_4_bid_button.png"), timeout=__default_timeout)
+    title = "물품공고분류조회 - SafeG2B"
+    if not auto_activate(title, timeout=__default_timeout):
+        log().error(f"A Window is not Activated. title={title}")
+        return False
+
+    if not auto.windows.img_click(resmgr.get(
+            "safeg2b_2_4_bid_button.png"), timeout=__default_timeout):
+        log().error(f"A Window is not Activated. title={title}")
+        return False
+    return True
 
 
 def safeg2b_participate_2_5_bid_notice():
+
     title = "투찰 공지사항 - SafeG2B"
     if not auto_activate(title, timeout=__default_timeout):
         log().error(f"A Window is not Activated. title={title}")
@@ -347,8 +356,15 @@ def safeg2b_participate(notice_no: str, price: str):
     auto.windows.img_click(resmgr.get(
         "safeg2b_2_3_bid_finger_print_button.png"), timeout=__default_timeout)
 
-    _log().info("2.4 bid participate(2)")
+    _log().info("1-투찰 버튼 클릭")
     safeg2b_participate_2_4_bid_participate()
+
+    # Validate - Already Registered?
+    if auto_activate("Message: 나라장터 - SafeG2B"):
+        log().info(f"Already registered.")
+        auto.windows.img_click(resmgr.get(
+            "safeg2b_message_window_confirm_button.png"), timeout=__default_timeout)
+        return True
 
     _log().info("2.5 투찰 공지사항")
     if not safeg2b_participate_2_5_bid_notice():
@@ -381,7 +397,9 @@ def safeg2b_participate(notice_no: str, price: str):
 def safeg2b_initialize():
     if not auto_activate(safeg2b_get_window_title(), timeout=100):
         raise Exception("SAFEG2B Window is not Activated")
-    _go_to_login_page()
+    if _go_to_login_page():
+        # Already logged in.
+        time.sleep(3)
 
 
 def safeg2b_close() -> bool:

@@ -12,6 +12,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 import account
 from auto import *
+import random
 
 # MessageBox
 import win32api
@@ -31,7 +32,7 @@ def close_all_popup(driver, timeout=10):
         # messagebox
         #  - 낙찰 후 미계약 건에 대한 공지         - 확인
         #  - 변경 미등록시 입찰무효처리에 대한 공지 - 확인
-        messagebox = kepco_get_messagebox(driver)
+        messagebox = kepco_get_messagebox(driver, timeout=3)
         if messagebox:
             if kepco_messagebox_is_open(messagebox):
                 confirm_btn = kepco_messagebox_get_button(messagebox, "확인")
@@ -72,10 +73,17 @@ def close_all_tab(driver: WebDriver):
     for btn in btns:
         btn.click()
 
+    while True:
+        if not wait_element(
+                driver, (By.XPATH, '//span[@class="x-tab-close-btn"]')):
+            break
+
+    # TODO: not working...
     # Wait until tabs are closed
     # 탭에 있는 close button을 확인해 본다.
-    wait_no_element(
-        driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'), timeout=3)
+    # wait_no_element(
+    #     driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'), timeout=3)
+
 
 # ID: 입찰(투찰진행) 탭 열기
 # Precondition
@@ -175,6 +183,7 @@ def _register_v2(driver: WebDriver, number, *, cert=None):
     log().info("1. 공고번호 조회 tab 열기")
     if not open_register_tab(driver):
         log().error("Failed to open register tab.")
+        return False
 
     # 1.2 조회
     log().info("1.2 search")
@@ -297,7 +306,7 @@ def _participate_v2(driver, number, cost):
     search_btn.click()
 
     # messagebox : 공고일자의 최대 검색일자는 6개월 입니다. "확인"
-    msgbox = kepco_get_messagebox(driver)
+    msgbox = kepco_get_messagebox(driver, timeout=5)
     if msgbox:
         log().info(f"messagebox: text={msgbox.text}")
         okbtn = kepco_messagebox_get_button(msgbox, "확인")
@@ -358,7 +367,7 @@ def _participate_v2(driver, number, cost):
     # ID: Kepco - 입찰 - 가격입력
     # ---------------------------
     cost_box = wait_element(
-        driver, (By.XPATH, "//tbody/tr[4]/td/div[1]/div/div/table/tbody/tr[1]/td/div[1]"))
+        driver, (By.XPATH, "//tbody/tr[4]/td/div[1]/div/div/table/tbody/tr/td/div[1]/label/span[text()='숫자']/../.."))
 
     # input layer
     input_layer = cost_box.find_element(By.XPATH, './/input')
@@ -370,7 +379,7 @@ def _participate_v2(driver, number, cost):
     text_layer.click()
 
     valid_box = wait_element(
-        driver, (By.XPATH, "//tbody/tr[4]/td/div[1]/div/div/table/tbody/tr[2]/td/div[1]"))
+        driver, (By.XPATH, "//tbody/tr[4]/td/div[1]/div/div/table/tbody/tr/td/div[1]/label/span[text()='확인']/../.."))
 
     # input layer
     input_layer = valid_box.find_element(By.XPATH, './/input')
@@ -400,6 +409,7 @@ def _participate_v2(driver, number, cost):
     btn = kepco_messagebox_get_button(msgbox, "확인")
     btn.click()
 
+    return True
 # -----------------------------
 
 

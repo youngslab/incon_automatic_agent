@@ -311,8 +311,10 @@ def _login(driver: WebDriver, token='BIO-SEAL') -> bool:
     # XXX: 너무 빨리 click이 되면 문제가 발생한다.
     #       인증 프로그램 실행 준비가 안되었습니다. 설치가 안된 경우 제품을 설치 후 진행해 주시기 바랍니다
     # TODO: 적절한 수준 찾기
+    # 3초: 가끔씩 메세지가 나오는 경우가 있다.
+    # 5초로 변경
     fp_login_btn = auto_find_element(driver, By.ID, "_fingerLoginBtn")
-    time.sleep(3)
+    time.sleep(5)
     auto_click(driver, fp_login_btn)
 
     # alert 창 확인 버튼
@@ -435,8 +437,6 @@ def _register_v2(driver: WebDriver, number, user, cert_pw):
     return True
 
 
-
-
 def _participate_v2(driver, number, cost):
     def is_alpha(c):
         try:
@@ -451,8 +451,8 @@ def _participate_v2(driver, number, cost):
 
     # clear pre/postfix
     number = remove_prefix(number)
-    number = number[:7]           
-    
+    number = number[:7]
+
     if not _need_registration(driver, number):
         return _participate_without_registration(driver, number, cost)
     else:
