@@ -300,10 +300,13 @@ def _participate_v2(driver, number, cost):
     num_input.send_keys(number)
 
     # 조회 버튼 클릭
-    # XXX: 가끔 click이 안되는 경우가 있다.
+    # XXX: 가끔 click이 안되는 경우가 있다. - ElementClickInterceptedException
     # auto_click(driver, By.XPATH, '//span[text()="조회"]')
     search_btn = wait_clickable(driver, (By.XPATH, '//span[text()="조회"]'))
-    search_btn.click()
+    try:
+        search_btn.click()
+    except:
+        driver.execute_script("arguments[0].click();", search_btn)
 
     # messagebox : 공고일자의 최대 검색일자는 6개월 입니다. "확인"
     msgbox = kepco_get_messagebox(driver, timeout=5)
@@ -339,7 +342,8 @@ def _participate_v2(driver, number, cost):
 
     # ID: Kepco - 입찰 - 입찰서 작성 - 지문인식 투찰 버튼
     log().info(f"Kepco - 입찰 - 입찰서 작성 - 지문인식 투찰 버튼")
-    auto_click(driver, By.XPATH, '//td[5]/div/img')
+    fp_bid_btn = wait_element(driver, (By.XPATH, '//td[5]/div/img'))
+    fp_bid_btn.click()
 
     # TODO: 시간이 오래된 경우 공인인증서 확인 창이 생성된다.
 
@@ -356,7 +360,12 @@ def _participate_v2(driver, number, cost):
     # ID: Kepco - 입찰 - 추첨
     log().info(f"Kepco - Common - 추첨번호 선택")
     boxes = auto_find_all_elements(
-        driver, By.XPATH, "//tr[3]/td/div/div/div/table/tbody/tr/td/a/span/span/span[2]")
+        driver, By.XPATH, '//span[contains(text(),"예정가격추첨갯수")]/../../div/div/table/tbody/tr/td/a/span/span/span[2]')
+    if len(boxes) != 15:
+        log().error(f"Failed to find 추첨갯수. expected:15, found:{len(boxes)}")
+        input("Press any keys to move on.")
+        return False
+
     boxes = random.sample(boxes, k=4)
     for box in boxes:
         # 4개가 모두 click이 안되는 경우가 있다.
@@ -699,13 +708,6 @@ def kepco_pre_close_popup(driver, timeout=10):
             if kepco_notice_is_open(notice):
                 kepco_notice_close(driver, notice)
 
-        #  한국서부발전 "닫기" 버튼 -
-        close_buttons = auto_find_all_elements(
-            driver, By.XPATH, '//div/div[3]/div/div/a/span/span/span[2 and text()="닫기"]', timeout=1)
-        for btn in close_buttons:
-            if btn.is_display():
-                auto_click(driver, btn)
-
         curr = time.time() - start
         if curr > timeout:
             break
@@ -730,7 +732,15 @@ def kepco_pre_get_file_attachment_panel(driver):
 def kepco_attach_small_business_confirmation_document(driver: WebDriver, filepath):
     panel = kepco_pre_get_file_attachment_panel(driver)
     # XXX: file chooser should be clicked not by javascript
-    panel.find_element(By.XPATH, './/span[text()="파일첨부"]').click()
+
+    # 파일첨부
+    try:
+        panel.find_element(By.XPATH, './/span[text()="파일첨부"]').click()
+    except:
+        # XXX: If popup are not cleared by previous process("close_all_popup")
+        #      Then, Exception(ElementClickInterceptedException) would occur.
+        log().error("Failed to click 파일첨부. Some of Popups might be not cleared and hides button. ")
+        return False
 
     # select a file.
     auto_file_chooser(filepath)
@@ -738,7 +748,10 @@ def kepco_attach_small_business_confirmation_document(driver: WebDriver, filepat
     # validate file attachment
     filename = os.path.basename(filepath)
     if not auto_find_element(driver, By.XPATH, f'.//div[text()="{filename}"]'):
-        raise Exception(f"Failed to attach a file. filename={filename}")
+        log().error(f"Failed to validate the attachment. filename={filename}")
+        return False
+
+    return True
 
 
 def kepco_pre_get_application_form(driver: WebDriver) -> WebElement:
@@ -833,7 +846,9 @@ def kepco_pre_register(driver: WebDriver, number):
     # 2.2. 중소기업확인서 첨부
     log().info("2.2 attach a file")
     filepath = os.path.join(os.path.expanduser("~"), ".iaa", "AR_중소기업_확인서.pdf")
-    kepco_attach_small_business_confirmation_document(driver, filepath)
+    if not kepco_attach_small_business_confirmation_document(driver, filepath):
+        log().error("failed to attach a file for small busineess.")
+        return False
 
     # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
     time.sleep(10)
@@ -898,4 +913,4 @@ if __name__ == "__main__":
     cert = account.account_get("kepco", "cert")
     kepco = Kepco(id, pw)
 
-    # print(kepco.register("G012202823"))
+    print(kepco.participate("G012204203"))

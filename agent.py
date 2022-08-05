@@ -22,6 +22,7 @@ __pre_markets = dict()
 # To skip some market
 # _market_filter = ['한국전력']
 # _market_filter = ['나라장터']
+# _market_filter = ['나라장터', '국방전자조달']
 _market_filter = []
 
 

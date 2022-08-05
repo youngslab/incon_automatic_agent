@@ -230,6 +230,8 @@ def auto_type(element: WebElement, text: str) -> bool:
 @dispatch
 def auto_type(driver: WebDriver, locator: Tuple[str, str], text: str, timeout: int = __default_timeout) -> bool:
     element = auto_find_element(driver, locator, timeout)
+    if not element:
+        return False
     return auto_type(element, text)
 
 

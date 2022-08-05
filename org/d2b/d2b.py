@@ -133,6 +133,9 @@ def _participate_without_registration(driver: WebDriver, number, cost) -> bool:
         log().error("Failed to write oath(2).")
         return False
 
+    # check popup ..
+    #
+
     # 4. 견적서 작성
     if not _write_estimate(driver, cost):
         log().error("Failed to write estimate.")
@@ -225,13 +228,13 @@ def choose_bid_in_list(driver: WebDriver, number):
     notice = next(filter(lambda x: x.find_element(
         By.XPATH, ".//td[1]/div").text.find(number) >= 0, notices[1:]), None)
     if not notice:
-        print(f"Can not find the bid. number={number}, cost={cost}")
+        print(f"Can not find the bid. number={number}")
         return False
     notice.click()
 
     # validate - Selected?
     if notice.find_element(By.XPATH, './/td[1]').get_attribute("sbgrid_select") != "true":
-        log().error(f"Can not find the bid. number={number}, cost={cost}")
+        log().error(f"Can not find the bid. number={number}")
         return False
 
     # validate - can participate?

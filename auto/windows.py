@@ -196,9 +196,11 @@ def img_click(img, timeout=1, grayscale=True, confidence=.9):
     center = img_wait_until(img, timeout=timeout,
                             grayscale=grayscale, confidence=confidence)
     if center is None:
-        raise Exception(f"Can not find {img}")
+        __logger().error(f"Can not find {img}")
+        return False
         
     pyautogui.click(center)
+    return True
 
 
 def img_type(img, msg, timeout=1, grayscale=True, confidence=.9):

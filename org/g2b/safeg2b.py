@@ -276,7 +276,7 @@ def safeg2b_participate_2_7_bid_price_confirmation():
         'safeg2b_2_7_cost_confirm_checkbox.png'), timeout=__default_timeout)
 
     auto.windows.img_click(resmgr.get(
-        'safeg2b_2_7_cost_confirm_button.png'), timeout=__default_timeout)
+        'safeg2b_2_7_cost_confirm_button.png'), timeout=__default_timeout, confidence=0.8)
 
 
 def safeg2b_participate_2_8_bid_lottery_number():
