@@ -1,88 +1,188 @@
 
 from selenium.webdriver.common.by import By
-import auto.selenium
-import auto.windows
-
 from org.g2b.safeg2b import *
 from org.g2b import safeg2b
 
+from integ_auto import Automatic
 
-def logger():
+
+def log():
     import logging
     return logging.getLogger(__name__)
 
 
-def _go_mypage(driver):
-    mypage = 'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do'
-    driver.get(mypage)
+def _go_mypage(auto: Automatic):
+    auto.go(
+        'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do')
 
 
-def _edit_mypage(driver):
-    # Click the edit button in multile frames sub>main>btn
-    with auto.selenium.Frame(driver, (By.ID, 'sub')):
-        with auto.selenium.Frame(driver, (By.NAME, 'main')):
-            edit_btn = (By.XPATH, '//*[@id="container"]/div[2]/div/a[1]')
-            auto.selenium.click(driver, edit_btn)
+def _do_in_main_frame(auto:Automatic, action):
+    sub_frame = auto.get_element(By.ID, 'sub')
+    if not sub_frame:
+        log().error("Failed to find sub frame")
+        return False
+
+    with auto.get_frame(sub_frame):
+        main_frame = auto.get_element(By.NAME, 'main')
+        if not main_frame:
+            log().error("Failed to find main frame")
+            return False
+
+        with auto.get_frame(main_frame):
+            return action()
 
 
-def _open_item_find_window(driver):
-    with auto.selenium.Frame(driver, (By.ID, 'sub')):
-        with auto.selenium.Frame(driver, (By.NAME, 'main')):
-            logger().info("click item find button")
-            search_btn = (
-                By.XPATH, '//*[@id="frm_addProd"]/div[3]/table/tbody/tr/td[1]/div/button')
-            return auto.selenium.click(driver, search_btn)
+def _edit_mypage(auto: Automatic):
+
+    def click_edit_button():
+        # Edit Button
+        if not auto.click(By.XPATH, '//*[@id="container"]/div[2]/div/a[1]'):
+            log().error("Failed to find edit button")
+            return False
+        return True
+
+    return _do_in_main_frame(auto, lambda: click_edit_button())
 
 
-def _find_product(driver, pn):
-    with auto.selenium.Window(driver, "[팝업] 세부품명찾기: 나라장터"):
+def _open_item_find_window(auto:Automatic):
+    def click_search_button():
+        # 검색 버튼
+        if not auto.click(
+                By.XPATH, '//*[@id="frm_addProd"]/div[3]/table/tbody/tr/td[1]/div/button'):
+            return False
+        return True
 
-        logger().info(f"type a product number={pn}")
-        pn_input = (By.ID, 'detailPrdnmNo')
-        auto.selenium.send_keys(driver, pn_input, pn)
-
-        search_btn = (By.ID, 'bt_search')
-        auto.selenium.click(driver, search_btn)
-        # select item
-        first_item = (
-            By.XPATH, '//*[@id="container"]/div[1]/table/tbody/tr/td[2]/a')
-        auto.selenium.click(driver, first_item)
+    return _do_in_main_frame(auto, lambda: click_search_button())
 
 
-def _register_product(driver):
-    # Move to frame
-    with auto.selenium.Frame(driver, (By.ID, 'sub')):
-        with auto.selenium.Frame(driver, (By.NAME, 'main')):
-            register_btn = (By.XPATH, '//*[@id="frm_addProd"]/div[2]/a')
-            logger().info("click register button")
-            success = auto.selenium.click(driver, register_btn)
-            if not success:
-                return False
+def _find_product(auto:Automatic, pn):
+    title = "[팝업] 세부품명찾기: 나라장터"
+    handle = auto.get_window_handle(title)
+    if not handle:
+        log().error(f"Failed to find window handle. title={title}")
+        return False
 
-            alert = auto.selenium.wait_until_alert(driver)
-            alert.accept()
-            logger().info(f"Accepted alert.")
+    with auto.get_window(handle):
+        # Product Number 입력
+        if not auto.type(By.ID, 'detailPrdnmNo', pn):
+            log().error(f"Failed to type product number. pn={pn}")
+            return False
 
-    with auto.selenium.Window(driver, "Message: 나라장터"):
-        confirm_btn = (By.XPATH, '//*[@id="container3"]/div[2]/div/a')
-        success = auto.selenium.click(driver, confirm_btn)
-        logger().info(f"click confirm button.")
+        # 검색 버튼
+        if not auto.click(By.ID, 'bt_search'):
+            log().error("Failed to click search button")
+            return False
 
+        # select item(첫번째 Item 클릭)
+        if not auto.click(By.XPATH, '//*[@id="container"]/div[1]/table/tbody/tr/td[2]/a'):
+            log().error("Failed to click 첫번째 아이템")
+            return False
+
+    return True
+
+
+def _register_product(auto: Automatic):
+
+    def click_register_button():
+        if not auto.click(By.XPATH, '//*[@id="frm_addProd"]/div[2]/a'):
+            log().error("Failed to click register button")
+            return False
+        if not auto.accept_alert():
+            log().error("Failed to accpet alert")
+            return False
+        return True
+
+    if not _do_in_main_frame(auto, lambda: click_register_button()):
+        return False
+
+    handle = auto.get_window_handle("Message: 나라장터")
+    with auto.get_window(handle):
+        if not auto.click(By.XPATH, '//*[@id="container3"]/div[2]/div/a'):
+            log().error("Failed to click 확인 버튼")
+            return False
+
+    return True
 
 # Go to the homepage to login
-def go_homepage(driver):
-    g2b_website = 'https://www.g2b.go.kr'
-    driver.get(g2b_website)
-
-# Login
 
 
-def login(driver, password):
+def go_homepage(auto: Automatic):
+    auto.go('https://www.g2b.go.kr')
+    return True
+
+
+# Go to the page where we can register a new product
+def go_product_registration_page(auto: Automatic):
+    # go mypage
+    _go_mypage(auto)
+
+    # click edit button
+    if not _edit_mypage(auto):
+        log().error("Failed to edit mypage")
+        return False
+
+    return True
+
+
+# Register a product
+def register_product(auto: Automatic, pn):
+    # open the window by clicking search button
+    if not _open_item_find_window(auto):
+        log().error("Failed to open itme find window")
+        return False
+
+    # move to the windows and input the product number
+    if not _find_product(auto, pn):
+        log().error("Failed to find a product.")
+        return False
+
+    # click register button and clear popup and confirm window
+    if not _register_product(auto):
+        log().error("Failed to register product.")
+        return False
+
+    return True
+
+
+def get_registered_products(auto:Automatic):
+    def get_product_names():
+        items = auto.get_elements(
+            By.XPATH, '//*[@id="frm_supProd"]/div[3]/table/tbody/tr/td[3]/div')
+        return [item.text for item in items]
+
+    return _do_in_main_frame(auto, lambda: get_product_names())
+
+
+# EXTERNAL INTERFACES
+
+def register(auto:Automatic, pns):
+    if not go_product_registration_page(auto):
+        log().error("Failed to go product registration page.")
+        return False
+
+    registered_pns = get_registered_products(auto)
+    for pn in pns:
+        if pn in registered_pns:
+            log().info(f"{pn} is already registered.")
+            continue
+        if not register_product(auto, pn):
+            log().error(f"Failed to register a product. pn={pn}")
+
+    return True
+
+
+def login(auto: Automatic, password):
+    go_homepage(auto)
+
+    member_frame = auto.get_element(By.ID, 'member_iframe')
+    if not member_frame:
+        log().error("Failed to find member frame")
+        return False
+
     # click the login button
-    with auto.selenium.Frame(driver, (By.ID, 'member_iframe')):
-        login_btn = (By.XPATH, '//*[@id="logout"]/ul/li[1]/ul/li/a/img')
-        success = auto.selenium.click(driver, login_btn)
-        if not success:
+    with auto.get_frame(member_frame):
+        if not auto.click(By.XPATH, '//*[@id="logout"]/ul/li[1]/ul/li/a/img'):
+            log().error("Failed to click Login Button")
             return False
 
     # try to login with certificate
@@ -90,118 +190,17 @@ def login(driver, password):
     return org.g2b.certificate.cert_login(password)
 
 
-# Go to the page where we can register a new product
-def go_product_registration_page(driver):
-    # go mypage
-    _go_mypage(driver)
-
-    # click edit button
-    _edit_mypage(driver)
-
-
-# Register a product
-def register_product(driver, pn):
-    # open the window by clicking search button
-    _open_item_find_window(driver)
-
-    # move to the windows and input the product number
-    _find_product(driver, pn)
-
-    # click register button and clear popup and confirm window
-    _register_product(driver)
-
-
-# Return items currently registered
-def get_registered_products(driver):
-    # TODO: how to check current pages
-    with auto.selenium.Frame(driver, (By.ID, 'sub')):
-        with auto.selenium.Frame(driver, (By.NAME, 'main')):
-            items = driver.find_elements(
-                By.XPATH, '//*[@id="frm_supProd"]/div[3]/table/tbody/tr/td[3]/div')
-            return [item.text for item in items]
-
-
-def g2b_register(driver, pns):
-    go_product_registration_page(driver)
-    registered_pns = get_registered_products(driver)
-    for pn in pns:
-        if pn in registered_pns:
-            logger().info(f"{pn} is already registered.")
-            continue
-        register_product(driver, pn)
-        logger().info(f"{pn} is registered.")
-    return True
-
-
 class G2B:
     def __init__(self, pw, close_windows=True, headless=True):
-        self.__driver = auto.selenium.create_edge_driver(headless=headless)
+        self.auto = Automatic.create(Automatic.DriverType.Edge)
         self.__close_windows = close_windows
-        go_homepage(self.__driver)
-        login(self.__driver, pw)
-        self.__driver.minimize_window()
+        login(self.auto, pw)
 
     def __del__(self):
         if self.__close_windows:
             self.__driver.close()
 
-    def __register(self, pns):
-        return g2b_register(self.__driver, pns)
-
     def register(self, pre):
         product_numbers = pre.number.split(",")
         product_numbers = [pn.strip() for pn in product_numbers]
-        return self.__register(product_numbers)
-
-
-class G2B__:
-    def __init__(self, pw, rn, close_windows=True, headless=True):
-        logger().debug("__init__")
-        self.__driver = auto.selenium.create_edge_driver(headless=headless)
-        self.__pw = pw
-        self.__close_windows = close_windows
-        go_homepage(self.__driver)
-        login(self.__driver, pw)
-        self.__driver.minimize_window()
-
-        # safe g2b
-        safeg2b_run()
-        safeg2b_initialize()
-        if not safeg2b._login_biotoken():
-            raise Exception("Failed to login to safeg2b")
-
-    def __del__(self):
-        logger().debug("__del__")
-        # if self.__close_windows:
-        #     safeg2b_close()
-        #     self.__driver.close()
-
-    def __register(self, pns):
-        return g2b_register(self.__driver, pns)
-
-    def register(self, pre):
-        product_numbers = pre.number.split(",")
-        product_numbers = [pn.strip() for pn in product_numbers]
-        return self.__register(product_numbers)
-
-    def participate(self, bid):
-        logger().info(f"participate in {bid.number} price={bid.price}")
-        self.__driver.minimize_window()
-        if not safeg2b_is_running():
-            return False, "safeg2b instance is not running"
-        safeg2b_participate(self.__pw, bid.number, str(bid.price))
-        return True, None
-
-
-if __name__ == "__main__":
-    from account import account_get
-    pw = account_get("g2b", "pw") 
-    rn = account_get("g2b", "rn")
-    obj = G2B(pw, rn)
-
-    # Test Register Pre
-    # class TestPre:
-    #     def __init__(self):
-    #         self.number = "1017150101"
-
-    # obj.register(TestPre())
+        return register(self.auto, product_numbers)
