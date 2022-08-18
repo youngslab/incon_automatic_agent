@@ -78,6 +78,8 @@ def _login_biotoken_certificate(pw):
 
     # BIO보안토큰 Window
     # 4. password 입력
+    autoit.win_wait("BIO보안토큰")
+
     if not auto_type(resmgr.get('certificate_login_bio_token_password_input.png'), pw):
         log().error("Failed to find password input box")
         return False
@@ -87,9 +89,16 @@ def _login_biotoken_certificate(pw):
         log().error("Failed to find 바이오토큰 확인 버튼")
         return False
 
-     # "제조사/모델명 선택" 윈도우가 종료될때 까지 기다린다.
-    if not wait_no_image(resmgr.get("certificate_bio_token_device_selection_program_installation_button.png"), timeout=60):
-        log().error("Failed to wait 제조사/모델명 선택 closed.")
+    # XX -> "제조사/모델명 선택" 윈도우가 종료될때 까지 기다린다.
+    # 이 창은 닫힌 상태에도 계속 존재하는 것을 나온다.
+    # if not wait_no_window("제조사/모델명 선택", timeout=120):
+        # if not wait_no_image(resmgr.get("certificate_bio_token_device_selection_program_installation_button.png"), timeout=60):
+        # log().error("Failed to wait 제조사/모델명 선택 closed.")
+        # return False
+    try:
+        autoit.win_wait_active("인증서 선택")
+    except:
+        log().error("Failed to login with finger print.")
         return False
 
     # 인증서 확인 버튼
@@ -432,8 +441,8 @@ class SafeG2B:
     def participate(self, bid):
         _log().info(f"participate in {bid.number} price={bid.price}")
         if not safeg2b_is_running():
-            return False, "safeg2b instance is not running"
-        return safeg2b_participate(bid.number, str(bid.price)), None
+            return False
+        return safeg2b_participate(bid.number, str(bid.price))
 
 
 if __name__ == '__main__':

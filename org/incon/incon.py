@@ -104,8 +104,12 @@ def incon_popup_check_do_not_open_today(webdriver):
 # Preregistration
 # ---------------------
 
-def incon_pre_go_page(driver):
+# 실제 이동을 하였으면 True, 아니면 False를 반환한다.
+def incon_pre_go_page(driver: WebDriver):
+    if driver.current_url == 'http://chodal.in-con.biz/bidmobile/msg/list.do':
+        return False
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/msg/list.do')
+    return True
 
 
 def incon_pre_close_popup(webdriver):
@@ -115,7 +119,28 @@ def incon_pre_close_popup(webdriver):
 
 
 def incon_pre_get_listitems(webdriver):
+
+    if incon_pre_go_page(webdriver):
+        log().info("moved to the preregistration list page")
+
+        log().info("close popup")
+        incon_pre_close_popup(webdriver)
+
+        log().info("activate all items")
+        incon_pre_listitem_activate_all(webdriver)
+
     return webdriver.find_elements(By.XPATH, '//*[@id="demo-page"]/div[2]/ul/li')
+
+
+def incon_pre_get_listitem_by_title(driver: WebDriver, title: str):
+    # get all items in a page
+    items = incon_pre_get_listitems(driver)
+    for item in items:
+        if item.text.find(title) < 0:
+            continue
+        return item
+    # failed to find an element
+    return None
 
 
 def incon_pre_listitem_activate_all(webdriver):
@@ -155,7 +180,6 @@ def incon_pre_listitem_get_data(webelement):
 class Preregistration:
     def __init__(self, driver, pre_listitem):
         self.__driver = driver
-        self.__element = pre_listitem
         self.__data = incon_pre_listitem_get_data(pre_listitem)
         self.market = self.__data['조달사이트']
         self.number = self.__get_number()
@@ -184,11 +208,22 @@ class Preregistration:
         raise Exception(f"Not found deadline: {self.__data}")
 
     def is_completed(self):
-        return incon_listitem_is_completed(self.__element)
+        element = incon_pre_get_listitem_by_title(
+            self.__driver, self.__get_title())
+        if not element:
+            # Should not reach here
+            raise Exception("Failed to find an element")
+
+        return incon_listitem_is_completed(element)
 
     def complete(self):
-        log().info("click item completion")
-        return incon_listitem_complete(self.__driver, self.__element)
+        element = incon_pre_get_listitem_by_title(
+            self.__driver, self.__get_title())
+        if not element:
+            # Should not reach here
+            raise Exception("Failed to find an element")
+
+        return incon_listitem_complete(self.__driver, element)
 
     def __str__(self):
         return f"{self.market}) {self.number}({self.title})"
@@ -197,8 +232,13 @@ class Preregistration:
 # ---------------------
 # Biding
 # ---------------------
+
+# 이동이 일어 났다면 True, 아니면 False를 반환한다.
 def incon_bid_go_page(driver: WebDriver):
+    if driver.current_url == 'http://chodal.in-con.biz/bidmobile/bid/list.do':
+        return False
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/bid/list.do')
+    return True
 
 
 def incon_bid_listitem_is_activated(listitem):
@@ -226,13 +266,35 @@ def incon_bid_get_listitem(webdriver, idx):
 
 
 def incon_bid_get_listitems(webdriver):
-    # check one item which has been shown
-    locator = (By.XPATH, '//*[@id="bid_list"]/li')
-    item = auto.selenium.find_element_until(webdriver, locator, timeout=5)
-    if item == None:
-        raise Exception(
-            f"Need to check current pages. {webdriver.current_url}")
-    return webdriver.find_elements(*locator)
+    if incon_bid_go_page(webdriver):
+        log().info("moved to the bid list page")
+
+        # cleanup
+        log().info("activate all bid items")
+        incon_bid_activate_all(webdriver)
+
+        items = webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
+        if not items:
+            raise Exception(
+                f"Need to check current pages. {webdriver.current_url}")
+
+        # pricing all items
+        log().info("price all items")
+        incon_bid_price_all(webdriver, items)
+
+    # 이전에 얻었던 element는 더 이상 유효하지 않다.
+    #  - pricing은 다른 페이지의 이동을 포함한다.
+    return webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
+
+
+def incon_bid_get_listitem_by_title(driver: WebDriver, title: str):
+    items = incon_bid_get_listitems(driver)
+    for item in items:
+        if item.text.find(title) < 0:
+            continue
+        return item
+    # failed to find an element.
+    return None
 
 
 def incon_bid_activate_all(webdriver):
@@ -372,8 +434,7 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
     return True
 
 
-def incon_bid_price_all(webdriver):
-    items = incon_bid_get_listitems(webdriver)
+def incon_bid_price_all(webdriver, items):
     log().debug(f"pricing) get all bid items. len={len(items)}")
     counts = len(items)
     for idx in range(counts):
@@ -401,7 +462,7 @@ def incon_bid_price_all(webdriver):
                 f"pricing) failed to price a bid. idx={idx}, retry={retry}")
 
     # Validate that number of item has been changed.
-    items = incon_bid_get_listitems(webdriver)
+    items = webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
     curr = len(items)
     if counts != curr:
         raise Exception(
@@ -424,49 +485,18 @@ class Bid:
         return f"{self.market:6s}) {self.number:20s}[{self.title:.6s}]  @ {self.price} won"
 
     def is_completed(self):
-        return incon_listitem_is_completed(self.__listitem)
+        # find element in the list...
+        element = incon_bid_get_listitem_by_title(self.__driver, self.title)
+        if not element:
+            raise Exception("Failed to find an element.")
+        return incon_listitem_is_completed(element)
 
     def complete(self):
-        return incon_listitem_complete(self.__driver, self.__listitem)
-
-# ---------------------
-# Incon
-# ---------------------
-
-
-def incon_get_pres(webdriver) -> list[Preregistration]:
-    log().info("go to the preregistration list page")
-    incon_pre_go_page(webdriver)
-
-    # cleanup
-    log().info("close popup")
-    incon_pre_close_popup(webdriver)
-    log().info("activate all items")
-    incon_pre_listitem_activate_all(webdriver)
-
-    # convert
-    log().info("create items of Pre class")
-    items = incon_pre_get_listitems(webdriver)
-    return [Preregistration(webdriver, item) for item in items]
-
-
-def incon_get_bids(webdriver) -> list[Bid]:
-    log().info("go to the bid list page")
-    incon_bid_go_page(webdriver)
-
-    # cleanup
-    log().info("activate all bid items")
-    incon_bid_activate_all(webdriver)
-
-    log().info("price all items")
-    incon_bid_price_all(webdriver)
-
-    # convert
-    log().info("create items of Bid")
-    items = incon_bid_get_listitems(webdriver)
-    return [Bid(webdriver, item) for item in items]
-
-# STATE MACHINE
+        # find element in the list...
+        element = incon_bid_get_listitem_by_title(self.__driver, self.title)
+        if not element:
+            raise Exception("Failed to find an element.")
+        return incon_listitem_complete(self.__driver, element)
 
 
 class Incon:
@@ -481,10 +511,12 @@ class Incon:
             self.driver.close()
 
     def get_pre_data(self):
-        return incon_get_pres(self.driver)
+        items = incon_pre_get_listitems(self.driver)
+        return [Preregistration(self.driver, item) for item in items]
 
     def get_bid_data(self):
-        return incon_get_bids(self.driver)
+        items = incon_bid_get_listitems(self.driver)
+        return [Bid(self.driver, item) for item in items]
 
 
 def test_execution_time():

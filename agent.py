@@ -22,8 +22,12 @@ __pre_markets = dict()
 # To skip some market
 # _market_filter = ['한국전력', '나라장터']
 # _market_filter = ['나라장터']
-_market_filter = ['국방전자조달', '한국전력']
-# _market_filter = []
+# _market_filter = ['국방전자조달', '한국전력']
+_market_filter = [
+    # '국방전자조달',
+    # '한국전력',
+    # '나라장터'
+]
 
 
 def create_data_provider():
@@ -106,20 +110,20 @@ def main():
     dp = create_data_provider()
 
     pres = dp.get_pre_data()
-    for pre in pres:
-        if not pre.is_completed():
-            _ = get_pre_market(pre.market)
+    pres = sorted(pres, key=lambda pre: pre.market)
+    # for pre in pres:
+    #     if not pre.is_completed():
+    #         _ = get_pre_market(pre.market)
 
     # create markets in advance.
     bids = dp.get_bid_data()
-    for bid in bids:
-        if not bid.is_completed() and bid.is_ready:
-            _ = get_bid_market(bid.market)
+    bids = sorted(bids, key=lambda bid: bid.market)
+    # for bid in bids:
+    #     if not bid.is_completed() and bid.is_ready:
+    #         _ = get_bid_market(bid.market)
 
     if settings_enable_pres:
         log().info("Start pre market business.")
-        pres = dp.get_pre_data()
-
         for pre in pres:
             log().info(f"Try to register pre. pre={pre}")
 
@@ -146,7 +150,6 @@ def main():
 
     if settings_enable_bids:
         log().info("Start bid market business.")
-        bids = dp.get_bid_data()
         for bid in bids:
 
             log().info(f"Register a bid. bid={bid}")

@@ -16,7 +16,7 @@ def _go_mypage(auto: Automatic):
         'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do')
 
 
-def _do_in_main_frame(auto:Automatic, action):
+def _do_in_main_frame(auto: Automatic, action):
     sub_frame = auto.get_element(By.ID, 'sub')
     if not sub_frame:
         log().error("Failed to find sub frame")
@@ -44,7 +44,7 @@ def _edit_mypage(auto: Automatic):
     return _do_in_main_frame(auto, lambda: click_edit_button())
 
 
-def _open_item_find_window(auto:Automatic):
+def _open_item_find_window(auto: Automatic):
     def click_search_button():
         # 검색 버튼
         if not auto.click(
@@ -55,7 +55,7 @@ def _open_item_find_window(auto:Automatic):
     return _do_in_main_frame(auto, lambda: click_search_button())
 
 
-def _find_product(auto:Automatic, pn):
+def _find_product(auto: Automatic, pn):
     title = "[팝업] 세부품명찾기: 나라장터"
     handle = auto.get_window_handle(title)
     if not handle:
@@ -144,7 +144,7 @@ def register_product(auto: Automatic, pn):
     return True
 
 
-def get_registered_products(auto:Automatic):
+def get_registered_products(auto: Automatic):
     def get_product_names():
         items = auto.get_elements(
             By.XPATH, '//*[@id="frm_supProd"]/div[3]/table/tbody/tr/td[3]/div')
@@ -155,7 +155,7 @@ def get_registered_products(auto:Automatic):
 
 # EXTERNAL INTERFACES
 
-def register(auto:Automatic, pns):
+def register(auto: Automatic, pns):
     if not go_product_registration_page(auto):
         log().error("Failed to go product registration page.")
         return False
@@ -195,6 +195,8 @@ class G2B:
         self.auto = Automatic.create(Automatic.DriverType.Edge)
         self.__close_windows = close_windows
         login(self.auto, pw)
+        # prevent register as soon as login
+        time.sleep(3)
 
     def __del__(self):
         if self.__close_windows:

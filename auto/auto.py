@@ -27,7 +27,7 @@ def log():
     return logging.getLogger(__package__)
 
 
-__default_timeout = 10
+__default_timeout = 60
 
 # -----------------------
 # wait element variation
@@ -101,8 +101,8 @@ def wait_no_window(title: str, *, timeout=__default_timeout):
     try:
         autoit.win_wait_close(window, timeout=timeout)
         return True
-    except:
-        log().error(f"Failed to wait a window closed. title={title}")
+    except Exception as e:
+        log().error(f"Failed to wait a window closed. title={title}, reason={e}")
         return False
 
 
