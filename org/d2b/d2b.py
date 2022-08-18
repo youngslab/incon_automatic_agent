@@ -27,16 +27,17 @@ def _is_login(auto: Automatic):
 def _agree_oath_2(auto: Automatic):
 
     # - 조세포탈 없음을 확약하는 서약서
-    if not auto.click(By.ID, 'c_box1'):
-        return False
-
     # - 청렴 계약 이행 서약서
-    if not auto.click(By.ID, 'c_box2'):
-        return False
-
     # - 행정정보 공동이용 사전동의서
-    if not auto.click(By.ID, 'c_box3'):
+    # - etc:  경우에 따라 추가 되는 경우가 있다. 
+
+    checkboxes = auto.get_elements(By.XPATH, '//input[@type="checkbox" and @name="a1"]')
+    if not checkboxes:
         return False
+    
+    for checkbox in checkboxes:
+        auto.click(checkbox)
+        time.sleep(0.5)
 
     # 확인 버튼
     if not auto.click(By.ID, 'btn_oath_confirm'):
