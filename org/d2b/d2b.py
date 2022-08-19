@@ -29,12 +29,13 @@ def _agree_oath_2(auto: Automatic):
     # - 조세포탈 없음을 확약하는 서약서
     # - 청렴 계약 이행 서약서
     # - 행정정보 공동이용 사전동의서
-    # - etc:  경우에 따라 추가 되는 경우가 있다. 
+    # - etc:  경우에 따라 추가 되는 경우가 있다.
 
-    checkboxes = auto.get_elements(By.XPATH, '//input[@type="checkbox" and @name="a1"]')
+    checkboxes = auto.get_elements(
+        By.XPATH, '//input[@type="checkbox" and @name="a1"]')
     if not checkboxes:
         return False
-    
+
     for checkbox in checkboxes:
         auto.click(checkbox)
         time.sleep(0.5)
@@ -353,21 +354,35 @@ def login(auto: Automatic, token='BIO-SEAL') -> bool:
     auto.click(By.XPATH,
                '//*[@id="pki-extra-media-box-contents3"]/div[3]/button')
 
+    log().info("Wait user input(fingerprint)")
     #####################
     # 사용자의 지문 입력 #
     #####################
 
+    log().info("Type pin number.")
     # Pin 번호 입력 - display될 때까지 기다린다.
-    auto.type(By.ID, 'nx_cert_pin', "00000000", timeout=120)
+    if not auto.type(By.ID, 'nx_cert_pin', "00000000", timeout=120):
+        log().error("실패 - 핀번호 입력")
+        return False
 
-    auto.click(By.XPATH,
-               '//*[@id="pki-extra-media-box-contents3"]/div[2]/button')
+    # Pin 번호 입력 확인
+    if not auto.click(By.XPATH,
+                      '//*[@id="pki-extra-media-box-contents3"]/div[2]/button'):
+        log().error("실패 - 핀번호 입력 확인")
+        return False
 
-    # 확인 버튼
-    auto.click(By.XPATH, '//*[@id="nx-cert-select"]/div[4]/button[1]')
+    # 인증서 확인 버튼
+    if not auto.click(By.XPATH, '//*[@id="nx-cert-select"]/div[4]/button[1]'):
+        log().error("실패 -  인증서 확인 버튼")
+        return False
 
     # popup 입찰서 작성안내 (optional)
     auto.click(By.ID, '_closeBtn1', timeout=3)
+
+    # Valiate - 로그아웃 버튼 확인
+    if not auto.get_element(By.ID, '_logoutBtn', timeout=10):
+        log().error("실패 -  로그아웃 버튼을 확인 할 수 없습니다.")
+        return False
 
     return True
 
