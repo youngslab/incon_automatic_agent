@@ -402,47 +402,50 @@ def register_v2(auto: Automatic, number, user, cert_pw):
     # 입찰참가신청서 작성
     auto.click(By.ID, 'btn_join')
 
+    log().info("Check that popup exists.")
     # 신청서 작성후 popup이 생성 된다면.. 이미 신청이 된 상태이다.
-    if not auto.accept_alert_with_text("입찰참가등록이 미완료된 건", timeout=3):
-        if auto.accept_alert():
+    if not auto.accept_alert_with_text("입찰참가등록이 미완료된 건", timeout=5):
+        if auto.accept_alert(timeout=5):
+            log().info("Already Registered")
             return True
 
-    # 서약서 작성
+    log().info("서약서 작성")
     auto.click(By.ID, 'c_box1')
     auto.click(By.ID, 'c_box2')
     auto.click(By.ID, 'subcont_dir_pay_yn1')
-    # XXX: Need to wait the above result?
-    # time.sleep(3)
     auto.click(By.ID, 'btn_confirm')
 
-    # 보증금납부 방법
+    log().info("보증금납부 방법")
     sel = auto.get_element(By.ID, 'grnt_mthd')
     auto.select(sel, '보증금면제')
 
     # ID: D2b - reg - 보증금 동의문
     # 보증금납부에 대한 서약서 확인
+    log().info("보증금 동의문")
     auto.click(By.ID, 'c_box2')
     auto.click(By.ID, 'c_box3')
     auto.click(By.XPATH,
                '//div[5]/div[2]/div[2]/div/div/div[3]/button[1]')
 
     # 약관 동의 체크
+    log().info("약관 동의 체크")
     auto.click(By.ID, 'bidAttention_check')
 
-    # 신청 버튼
+    log().info("신청 버튼 클릭")
     auto.click(By.ID, 'btn_wrt')
     auto.accept_alert()
 
-    # 인증서 로그인
+    log().info("인증서 로그인")
     _login_cert(auto, user, cert_pw)
 
     # 팝업 확인
     auto.accept_alert()
 
     # ID: D2B - 사후심사대상 입찰안내
-    # Not Always
+    # Optional
     # ACTION: "닫기" 버튼이 있고, 보인다면 클릭.
-    auto.click(By.XPATH, '//*[@id="layer"]/div[2]/div/div/div[2]/button[3]')
+    auto.click(
+        By.XPATH, '//*[@id="layer"]/div[2]/div/div/div[2]/button[3]', timeout=3)
 
     return True
 
