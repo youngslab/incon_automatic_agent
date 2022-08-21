@@ -67,16 +67,30 @@ def wait_no_element(driver: WebDriver, locator, timeout: int = 10) -> bool:
 
 
 def close_all_tab(driver: WebDriver):
-    # find close tab buttons
-    btns = wait_all_elements(
-        driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'))
-    for btn in btns:
-        btn.click()
 
-    while True:
-        if not wait_element(
-                driver, (By.XPATH, '//span[@class="x-tab-close-btn"]')):
-            break
+    driver.refresh()
+
+    # wait unti
+    try:
+        WebDriverWait(driver, 3).until(
+            EC.alert_is_present(), "Can not find an alert window")
+        # accept alert
+        driver.switch_to.alert.accept()
+        log().info("Refresh")
+
+    except Exception as e:
+        log().info("No need to refresh")
+
+    # # find close tab buttons
+    # btns = wait_all_elements(
+    #     driver, (By.XPATH, '//span[@class="x-tab-close-btn"]'))
+    # for btn in btns:
+    #     btn.click()
+
+    # while True:
+    #     if not wait_element(
+    #             driver, (By.XPATH, '//span[@class="x-tab-close-btn"]')):
+    #         break
 
     # TODO: not working...
     # Wait until tabs are closed
@@ -459,19 +473,14 @@ def kepco_certificate_login(driver, pw):
 def kepco_certificate_fp_login(driver):
 
     with Frame(driver, (By.XPATH, '//iframe[contains(@src,"kica/WebUI/kepco_html/kicaCert.jsp")]'), timeout=30):
+        # XXX: 바로 바이오 토큰을 선택하면 인증서가 남아 있는 현상이 있는데 이를
+        # 제거하기 위해 잠시 시간을 갖는다.
+        time.sleep(1.5)
+
         # select certificate location: bio-token
         auto_click(driver, By.XPATH, '//button[text()="바이오토큰"]')
         auto_click(driver, By.XPATH,
                    '//*[@id="js-seltab"]/li[5]/div/ul/li/a[contains(text(), "BIO-SEAL")]')
-
-    # Need to check the result of the user action
-    res = win32api.MessageBox(None, "지문 입력이 정상적으로 끝났나요?", "Icon Automatic Agent",
-                              MB_YESNO | MB_SYSTEMMODAL)
-
-    # Result value: (예:6), (아니오:7)
-    if res == 7:
-        return False
-
     # login as usual
     return kepco_certificate_login(driver, "00000000")
 
@@ -490,6 +499,13 @@ def kepco_login(driver, id, pw, *, cert_pw=None):
     else:
         kepco_certificate_fp_login(driver)
 
+    # validate login
+    # 로그인 버튼이 안보이는 상태로 전환될 때 까지 기다린다.
+    if not wait_element(driver, (By.XPATH,
+                                 '//a[contains(@style, "display: none;")]/span/span/span[2 and text()="로그인"]'), timeout=20):
+        return False
+
+    return True
 
 # --------------------
 # Notice
@@ -893,7 +909,8 @@ class Kepco:
         self.__cert_pw = cert_pw
         self.driver = kepco_create_driver(headless=headless)
         kepco_go_homepage(self.driver)
-        kepco_login(self.driver, id, pw, cert_pw=cert_pw)
+        if not kepco_login(self.driver, id, pw, cert_pw=cert_pw):
+            raise Exception("Failed Log in.")
 
     def __del__(self):
         log().debug("__del__")
