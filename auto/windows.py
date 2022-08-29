@@ -25,8 +25,8 @@ def wait_until_window_handle(title, timeout=10):
     return win32gui.FindWindow(None, title)
 
 
-def wait_until_image(img, timeout=5, grayscale=True):
-    while pyautogui.locateCenterOnScreen(img, grayscale=grayscale) is None and timeout > 0:
+def wait_until_image(img, timeout=5, grayscale=True, confidence=0.9):
+    while pyautogui.locateCenterOnScreen(img, grayscale=grayscale, confidence=confidence) is None and timeout > 0:
         timeout = timeout - 0.5
         time.sleep(0.5)
     __logger().debug(

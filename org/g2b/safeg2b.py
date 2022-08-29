@@ -38,7 +38,8 @@ def _log():
 
 def _go_to_login_page():
     _log().info("try to go home.")
-    if not auto_click(resmgr.get('safeg2b_0_etc_homepage.png')):
+
+    if not auto_click(resmgr.get('safeg2b_0_etc_homepage.png'), timeout=10):
         _log().info("Can't go home. But it's ok. That means it's already at home")
         return False
     return True
@@ -60,7 +61,8 @@ def _is_login():
 def _login_biotoken_certificate(pw):
 
     # 1. 바이오토큰 click
-    if not auto_click(resmgr.get('certificate_login_bio_token.png'), timeout=60):
+    # XXX: 바이오토큰과 유사한 보안토큰이 선택되는 경우가 있다. 이에 confidence를 변경 0.9->0.95.
+    if not auto_click(resmgr.get('certificate_login_bio_token.png'), timeout=60, confidence=0.95):
         log().error("Failed to find 바이오토큰 image")
         return False
 
@@ -173,7 +175,7 @@ def safeg2b_is_running():
 def safeg2b_run():
     if safeg2b_is_running():
         _log().info("SafeG2B is already running")
-        return
+        return False
 
     if not ctypes.windll.shell32.IsUserAnAdmin():
         _log().info("Need privileged permission. Elevate.")
@@ -183,6 +185,7 @@ def safeg2b_run():
     directory = safeg2b_get_exe_directory()
     _log().info("Start SafeG2B.")
     os.system(f"cd {directory} && start {os.path.join(directory, filename)}")
+    return True
 
 # -------------------------------
 
@@ -223,6 +226,7 @@ def safeg2b_window_message_confirm():
 
 def safeg2b_participate_2_4_bid_participate():
     title = "물품공고분류조회 - SafeG2B"
+    log().info(f"{title} 윈도우를 활성화.")
     if not auto_activate(title, timeout=__default_timeout):
         log().error(f"A Window is not Activated. title={title}")
         return False
@@ -235,21 +239,38 @@ def safeg2b_participate_2_4_bid_participate():
 
 
 def safeg2b_participate_2_5_bid_notice():
-
     title = "투찰 공지사항 - SafeG2B"
+    log().info("투찰 공지사항 윈도우 대기")
     if not auto_activate(title, timeout=__default_timeout):
         log().error(f"A Window is not Activated. title={title}")
         return False
 
+    # log().info("투찰 공지사항 윈도우의 컨텐츠가 모두 로딩 될때 까지 대기")
     # After bring a window to top, It takes not niggrigible time.
-    auto.windows.wait_until_image(resmgr.get(
-        "safeg2b_2_5_bid_notice_title_image.png"), timeout=__default_timeout)
-    pyautogui.press("end")
-    auto.windows.wait_until_image(resmgr.get(
-        "safeg2b_2_5_bid_notice_yes_checkbox.png"), timeout=__default_timeout)
+    # auto.windows.wait_until_image(resmgr.get(
+    #     "safeg2b_2_5_bid_notice_title_image.png"), timeout=__default_timeout, confidence=0.75)
 
-    yes_buttons = auto.windows.img_find_all(
-        resmgr.get("safeg2b_2_5_bid_notice_yes_checkbox.png"))
+    tried = 0
+    while tried < 5:
+        log().info("윈도우 하단으로 이동")
+        pyautogui.press("end")
+        # auto.windows.wait_until_image(resmgr.get(
+        #     "safeg2b_2_5_bid_notice_yes_checkbox.png"), timeout=__default_timeout)
+
+        yes_buttons = auto.windows.img_find_all(
+            resmgr.get("safeg2b_2_5_bid_notice_yes_checkbox.png"))
+
+        if yes_buttons:
+            break
+
+        time.sleep(1)
+        tried = tried + 1
+        continue
+
+    if tried == 5:
+        log().error("컨텐츠가 제대로 로딩되지 않은 것 같습니다.")
+        return False
+
     for btn in yes_buttons:
         auto.windows.click(*btn)
 
@@ -369,7 +390,7 @@ def safeg2b_participate(notice_no: str, price: str):
     safeg2b_participate_2_4_bid_participate()
 
     # Validate - Already Registered?
-    if auto_activate("Message: 나라장터 - SafeG2B"):
+    if auto_activate("Message: 나라장터 - SafeG2B", timeout=5):
         log().info(f"Already registered.")
         auto.windows.img_click(resmgr.get(
             "safeg2b_message_window_confirm_button.png"), timeout=__default_timeout)
@@ -377,8 +398,8 @@ def safeg2b_participate(notice_no: str, price: str):
 
     _log().info("2.5 투찰 공지사항")
     if not safeg2b_participate_2_5_bid_notice():
-        _log().error("Failed to proceed 투찰 공지사항. 물품등록이 안되었거나, 등록기한이 지난경우일 가능성이 있습니다.")
-        return False
+        _log().warn("물품등록이 안되었거나, 등록기한이 지난경우일 가능성이 있습니다. 이 경우는 계속 시도되는 것을 막기 위해 투찰 성공으로 인식하기로 합니다.")
+        return True
 
     _log().info("2.6 물품구매입찰서")
     safeg2b_participate_2_6_bid_doc(price)
@@ -401,6 +422,7 @@ def safeg2b_participate(notice_no: str, price: str):
     # Optional
     # _log().info("2.11 나라장터 행정정보 제3자 제공서비스 수요조사 - SafeG2B")
     # safeg2b_participate_2_12_survery()
+    return True
 
 
 def safeg2b_initialize():
@@ -428,9 +450,12 @@ class SafeG2B:
     def __init__(self, *, close_windows=True):
         self.__close_windows = close_windows
 
-        # safe g2b
-        safeg2b_run()
-        safeg2b_initialize()
+        # safe g2b 실행
+        if not safeg2b_run():
+            # Already running
+            # homepage로 이동
+            safeg2b_initialize()
+
         if not _login_biotoken():
             raise Exception("Failed to login to safeg2b")
 

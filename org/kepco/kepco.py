@@ -501,8 +501,10 @@ def kepco_login(driver, id, pw, *, cert_pw=None):
 
     # validate login
     # 로그인 버튼이 안보이는 상태로 전환될 때 까지 기다린다.
+    # XXX: 지문 로그인 이후 시간이 좀 걸린다.
     if not wait_element(driver, (By.XPATH,
-                                 '//a[contains(@style, "display: none;")]/span/span/span[2 and text()="로그인"]'), timeout=20):
+                                 '//a[contains(@style, "display: none;")]/span/span/span[2 and text()="로그인"]'), timeout=200):
+        log.error("실패 - 로그인 버튼이 200초 동안 사라지지 않았음")
         return False
 
     return True

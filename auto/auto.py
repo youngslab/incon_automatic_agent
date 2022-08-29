@@ -102,7 +102,8 @@ def wait_no_window(title: str, *, timeout=__default_timeout):
         autoit.win_wait_close(window, timeout=timeout)
         return True
     except Exception as e:
-        log().error(f"Failed to wait a window closed. title={title}, reason={e}")
+        log().error(
+            f"Failed to wait a window closed. title={title}, reason={e}")
         return False
 
 
