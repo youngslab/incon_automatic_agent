@@ -4,25 +4,13 @@ import time
 import os
 import traceback
 from org.incon import Incon
-from org.g2b.g2b import G2B
-from org.g2b.g2b import SafeG2B
-from org.kepco import Kepco
-from org.d2b import D2B
 
 import logging
 from account import account_get
 from logger import logger_init
 
+from market_factory import create_market
 
-settings_enable_pres = True
-settings_enable_bids = True
-
-__pre_markets = dict()
-
-# To skip some market
-# _market_filter = ['한국전력', '나라장터']
-# _market_filter = ['나라장터']
-# _market_filter = ['국방전자조달', '한국전력']
 _market_filter = [
     # '국방전자조달',
     # '한국전력',
@@ -37,71 +25,6 @@ def create_data_provider():
     return Incon(id, pw)
 
 
-def create_pre_market(market: str):
-    if market in _market_filter:
-        return None
-
-    if market == "나라장터":
-        pw = account_get("g2b", "pw")
-        return G2B(pw, headless=False)
-    elif market == "한국전력":
-        kepco_id = account_get("kepco", "id")
-        kepco_pw = account_get("kepco", "pw")
-        # login to support
-        return Kepco(kepco_id, kepco_pw)
-    elif market == "국방전자조달":
-        d2b_id = account_get("d2b", "id")
-        d2b_pw = account_get("d2b", "pw")
-        d2b_user = account_get("d2b", "user")
-        d2b_cert = account_get("d2b", "cert")
-        return D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
-    else:
-        return None
-
-
-def get_pre_market(market: str):
-    res = __pre_markets.get(market)
-    if res:
-        return res
-    else:
-        obj = create_pre_market(market)
-        __pre_markets[market] = obj
-        return obj
-
-
-__markets = dict()
-
-
-def get_bid_market(market: str):
-
-    if market in _market_filter:
-        return None
-
-    res = __markets.get(market)
-    if res:
-        return res
-    else:
-        obj = create_bid_market(market)
-        __markets[market] = obj
-        return obj
-
-
-def create_bid_market(market: str):
-    if market in _market_filter:
-        return None
-    if market == "나라장터":
-        return SafeG2B()
-    else:
-        return get_pre_market(market)
-
-
-def iaa_get_config_directory():
-    dir = os.path.join(os.path.expanduser('~'), ".iaa")
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    return dir
-
-
 def log():
     return logging.getLogger(__name__)
 
@@ -111,75 +34,56 @@ def main():
 
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
-    # for pre in pres:
-    #     if not pre.is_completed():
-    #         _ = get_pre_market(pre.market)
+    pres = [pre for pre in pres if not pre.is_completed()]
 
-    # create markets in advance.
     bids = dp.get_bid_data()
     bids = sorted(bids, key=lambda bid: bid.market)
-    # for bid in bids:
-    #     if not bid.is_completed() and bid.is_ready:
-    #         _ = get_bid_market(bid.market)
+    bids = [bid for bid in bids if bid.is_ready and not bid.is_completed()]
 
-    if settings_enable_pres:
-        log().info("Start pre market business.")
+    # markets
+    markets = [bid.market for bid in bids] + \
+        [pre.market for pre in pres]
+    markets = set(markets)
+    markets = [create_market(market)
+               for market in markets if market not in _market_filter]
+
+    for market in markets:
+
+        # filter not supported markets
+        if not market:
+            continue
+
+        # login first
+        market.login()
+
+        # register prebid
         for pre in pres:
-            log().info(f"Try to register pre. pre={pre}")
-
-            if pre.is_completed():
-                log().info(f"Skip. Already completed.")
+            if pre.market != market.name:
                 continue
 
-            market = get_pre_market(pre.market)
-            if not market:
-                log().info(f"Skip. Market is not supported. ")
+            if not market.register(pre):
+                log().warning(f"Failed to register. pre={pre}")
                 continue
 
-            success = market.register(pre)
-            if not success:
-                log().error(f"Failed to register a pre.")
-                continue
-
+            log().info(f"Successfully registered. pre={pre}")
             pre.complete()
-            time.sleep(0.1)
-            if not pre.is_completed():
-                raise Exception(f"Clicked But Not Completed.")
 
-            log().info(f"Registered.")
-
-    if settings_enable_bids:
-        log().info("Start bid market business.")
+        # register bid
         for bid in bids:
-
-            log().info(f"Register a bid. bid={bid}")
-
-            if bid.is_completed():
-                log().info(f"Skip. Already completed.")
+            if bid.market != market.name:
                 continue
 
-            if not bid.is_ready:
-                log().info(f"Skip. Not ready.")
+            if not market.participate(bid):
+                log().warning(f"Failed to participate. bid={bid}")
                 continue
 
-            market = get_bid_market(bid.market)
-            if not market:
-                log().info(f"Skip. Market is not supported.")
-                continue
-
-            success = market.participate(bid)
-
-            if not success:
-                log().warning(f"Failed to register.")
-                continue
-
+            log().info(f"Successfully participated. bid={bid}")
             bid.complete()
-            log().info(f"Registered.")
+
+        market.finish()
 
 
 if __name__ == "__main__":
-    # logger setup
-    # logger_init(basedir=iaa_get_config_directory())
     logger_init()
 
     try:

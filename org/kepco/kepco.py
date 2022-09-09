@@ -908,22 +908,25 @@ class Kepco:
     # headless: Do not allow with headless, It will fails to login.
     def __init__(self, id, pw, *, cert_pw=None, headless=False):
         log().debug("__init__")
+        self.id = id
+        self.pw = pw
         self.__cert_pw = cert_pw
         self.driver = kepco_create_driver(headless=headless)
         kepco_go_homepage(self.driver)
-        if not kepco_login(self.driver, id, pw, cert_pw=cert_pw):
-            raise Exception("Failed Log in.")
 
     def __del__(self):
         log().debug("__del__")
         self.driver.close()
 
-    def register(self, pre):
-        return _register_v2(self.driver, pre.number)
+    def login(self):
+        return kepco_login(self.driver, self.id, self.pw, cert_pw=self.__cert_pw)
 
-    def participate(self, bid):
-        log().info(f"participate in {bid.number} price={bid.price}")
-        return _participate_v2(self.driver, bid.number, str(bid.price))
+    def register(self, code):
+        return _register_v2(self.driver, code)
+
+    def participate(self, code, price):
+        log().info(f"participate in {code} price={price}")
+        return _participate_v2(self.driver, code, price)
 
 
 if __name__ == "__main__":

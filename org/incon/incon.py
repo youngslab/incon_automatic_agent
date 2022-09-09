@@ -331,7 +331,7 @@ def incon_bid_listitem_get_market(listitem):
     market_img = listitem.find_element(By.XPATH, './/a[1]/img[1]')
     img_src = market_img.get_attribute("src")
     if img_src.find("bid_title_icon1.png") >= 0:
-        return "나라장터"
+        return "나라장터(안전입찰)"
     elif img_src.find("bid_title_icon2.png") >= 0:
         return "국방전자조달"
     elif img_src.find("bid_title_icon3.png") >= 0:

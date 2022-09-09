@@ -456,18 +456,21 @@ class SafeG2B:
             # homepage로 이동
             safeg2b_initialize()
 
+    def login(self):
         if not _login_biotoken():
-            raise Exception("Failed to login to safeg2b")
+            _log().error("Failed to login to safeg2b")
+            return False
+        return True
 
     def __del__(self):
         if self.__close_windows:
             safeg2b_close()
 
-    def participate(self, bid):
-        _log().info(f"participate in {bid.number} price={bid.price}")
+    def participate(self, code, price):
+        _log().info(f"participate in. code={code}, price={price}")
         if not safeg2b_is_running():
             return False
-        return safeg2b_participate(bid.number, str(bid.price))
+        return safeg2b_participate(code, price)
 
 
 if __name__ == '__main__':

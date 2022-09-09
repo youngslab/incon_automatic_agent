@@ -194,15 +194,21 @@ class G2B:
     def __init__(self, pw, close_windows=True, headless=True):
         self.auto = Automatic.create(Automatic.DriverType.Edge)
         self.__close_windows = close_windows
-        login(self.auto, pw)
+        self.__pw = pw
+
+    def login(self):
+        if not login(self.auto, self.__pw):
+            log().error("Failed to login")
+            return False
         # prevent register as soon as login
         time.sleep(3)
+        return True
 
     def __del__(self):
         if self.__close_windows:
             self.__driver.close()
 
-    def register(self, pre):
-        product_numbers = pre.number.split(",")
-        product_numbers = [pn.strip() for pn in product_numbers]
-        return register(self.auto, product_numbers)
+    def register(self, code):
+        codes = code.split(",")
+        codes = [pn.strip() for pn in codes]
+        return register(self.auto, codes)

@@ -164,7 +164,7 @@ def _can_participate(auto: Automatic, number):
         status = notice.find_element(By.XPATH, './/td[7]/div/span').text
         if status.find("투찰가능") < 0:
             log().error(
-                f"Can not participate. number={number}, status={status}")
+                f"투찰이 불가능합니다. 상태를 확인해 주세요. number={number}, status={status}")
             return False
 
         return True
@@ -484,11 +484,12 @@ class D2B:
         # go homepage
         self.auto.go("https://www.d2b.go.kr/index.do")
 
-        login(self.auto)
+    def login(self):
+        return login(self.auto)
         # d2b_login(self.driver, user, id, pw, cert_pw)
 
-    def register(self, pre):
-        return register_v2(self.auto, pre.number, self.__user, self.__cert_pw)
+    def register(self, code):
+        return register_v2(self.auto, code, self.__user, self.__cert_pw)
 
-    def participate(self, bid):
-        return participate_v2(self.auto, bid.number, str(bid.price))
+    def participate(self, code, price):
+        return participate_v2(self.auto, code, price)
