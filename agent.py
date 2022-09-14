@@ -63,6 +63,9 @@ def main():
     markets = [create_market(market)
                for market in markets if market not in _market_filter]
 
+    # market reorder
+    markets.sort(key=lambda x: x == "나라장터(안전입찰)")
+
     for market in markets:
 
         # filter not supported markets
