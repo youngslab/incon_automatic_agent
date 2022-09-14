@@ -15,7 +15,7 @@ from logger import logger_init
 
 
 def log():
-    return logging.getLogger()
+    return logging.getLogger("markets")
 
 
 class Commands(Enum):
@@ -107,7 +107,7 @@ class MarketType(Enum):
 class Proxy:
     def start_server(conn, market):
         # 다른 프로세스의 entry point이기 때문에 별도의 logger init이 필요하다.
-        # logger_init()
+        logger_init()
         log().info(f"Start a server. market={market.value}]")
         market = MarketFactory.create(market)
         server = Server(market, conn)
