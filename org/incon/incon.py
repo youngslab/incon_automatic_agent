@@ -11,9 +11,22 @@ from selenium.webdriver.common.by import By
 # ---------------------
 
 
+def to_code(market_title: str):
+    if market_title == "국방전자조달":
+        return "d2b"
+    elif market_title == "나라장터(안전입찰)":
+        return "safeg2b"
+    elif market_title == "나라장터":
+        return "g2b"
+    elif market_title == "한국전력":
+        return "kepco"
+    else:
+        return "unknown"
+
 # ---------------------
 # Incon Login Page
 # ---------------------
+
 
 def log():
     return logging.getLogger(__package__)
@@ -226,7 +239,7 @@ class Preregistration:
         return incon_listitem_complete(self.__driver, element)
 
     def __str__(self):
-        return f"{self.market}) {self.number}({self.title})"
+        return f"market={to_code(self.market):6s}, code={self.number:20s}, title={self.title}"
 
 
 # ---------------------
@@ -279,7 +292,7 @@ def incon_bid_get_listitems(webdriver):
                 f"Need to check current pages. {webdriver.current_url}")
 
         # pricing all items
-        log().info("price all items")
+        log().info(f"price all items({len(items)}).")
         incon_bid_price_all(webdriver, items)
 
     # 이전에 얻었던 element는 더 이상 유효하지 않다.
@@ -435,7 +448,6 @@ def incon_bid_listitem_price(webdriver, listitem) -> bool:
 
 
 def incon_bid_price_all(webdriver, items):
-    log().debug(f"pricing) get all bid items. len={len(items)}")
     counts = len(items)
     for idx in range(counts):
         priced = False
@@ -447,13 +459,13 @@ def incon_bid_price_all(webdriver, items):
                     f"pricing) failed to get item. idx={idx}")
                 break
             if incon_bid_listitem_has_price(item):
-                log().info(
+                log().debug(
                     f"pricing) The bid was priced. idx={idx}, retry={retry}")
                 priced = True
                 break
             retry = retry + 1
             temp = Bid(webdriver, item)
-            log().info(
+            log().debug(
                 f"pricing) price the bid item. idx={idx}, retry={retry}, nubmer={temp.number}, title={temp.title}")
             incon_bid_listitem_price(webdriver, item)
 
@@ -482,7 +494,7 @@ class Bid:
         self.price = incon_bid_listitem_get_price(self.__listitem)
 
     def __str__(self):
-        return f"{self.market:6s}) {self.number:20s}[{self.title:.6s}]  @ {self.price} won"
+        return f"market={to_code(self.market):7s}, code={self.number:20s}, price={int(self.price):12,} KRW , title={self.title}"
 
     def is_completed(self):
         # find element in the list...
