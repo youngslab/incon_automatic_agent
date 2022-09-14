@@ -2,29 +2,20 @@
 # example of returning a variable from a process using a value
 # from asyncore import ExitNow
 from multiprocessing import Process, Pipe
-from random import random
-from time import sleep
-from multiprocessing import Array
-from multiprocessing import Process
-from venv import create
-
-# function to execute in a child process
-from selenium import webdriver
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.edge.service import Service
-from webdriver_manager.microsoft import EdgeChromiumDriverManager
-
+from typing import List
 from enum import Enum
-from typing import Tuple, Union, List
-
-import os
-
 from org.d2b import D2B
 from org.kepco import Kepco
 from org.g2b.g2b import G2B
 from org.g2b.g2b import SafeG2B
 
 from account import account_get
+import logging
+from logger import logger_init
+
+
+def log():
+    return logging.getLogger()
 
 
 class Commands(Enum):
@@ -76,28 +67,33 @@ class Server:
                 continue
 
             req: Request = self.conn.recv()
-
+            res: Response = None
+            log().debug(f"server) request={req}")
             if req.command == Commands.EXIT:
-                self.conn.send(Success())
-                return
+                break
+
             elif req.command == Commands.LOGIN:
                 if self.market.login():
-                    self.conn.send(Success())
+                    res = Success()
                 else:
-                    self.conn.send(Fail("Can not log in"))
+                    res = Fail("Can not login")
             elif req.command == Commands.REGISTER:
                 if self.market.register(*req.params):
-                    self.conn.send(Success())
+                    res = Success()
                 else:
-                    self.conn.send(Fail("Can not register"))
+                    res = Fail("Can not register")
             elif req.command == Commands.PARTICIPATE:
                 if self.market.participate(*req.params):
-                    self.conn.send(Success())
+                    res = Success()
                 else:
-                    self.conn.send(Fail("Can not participate"))
+                    res = Fail("Can not participate")
             else:
-                self.conn.send(Fail(f"Unkown command."))
+                res = Fail(f"Unkown command")
 
+            log().debug(f"server) response={res}")
+            self.conn.send(res)
+
+        self.conn.send(Success())
         self.conn.close()
 
 
@@ -109,15 +105,16 @@ class MarketType(Enum):
 
 
 class Proxy:
-
     def start_server(conn, market):
-        print(f"[{market}] PROXY::task")
+        # 다른 프로세스의 entry point이기 때문에 별도의 logger init이 필요하다.
+        # logger_init()
+        log().info(f"Start a server. market={market.value}]")
         market = MarketFactory.create(market)
         server = Server(market, conn)
         server.run()
 
     def __init__(self, market: MarketType):
-        print(f"[{market}] PROXY::init")
+        log().info(f"Create a market={market.value}")
         self.market = market
         self.name = market.value
         parent_conn, child_conn = Pipe()
@@ -126,53 +123,49 @@ class Proxy:
             child_conn, market))
         self.child.start()
 
-    def login(self, timeout=60):
-        print(f"[{self.market}] PROXY::login")
+    def login(self, *, timeout=120):
+        log().info(f"Login. market={self.name}")
         self.conn.send(Request(Commands.LOGIN))
         if self.conn.poll(timeout=timeout):
             res: Response = self.conn.recv()
-            print(f"res={res}")
             if not res.result:
-                print(f"Failed. reason={res.reason}")
+                log().error(f"Failed to login. reason={res.reason}")
             return res.result
         else:
-            print("Failed. timeout.")
+            log().error("Failed to login. reason=timeout.")
             return False
 
-    def participate(self, bid, *, timeout=60):
-        print(f"[{self.market}] PROXY::participate")
+    def participate(self, bid, *, timeout=120):
+        log().info(f"Participate. market={self.name}, bid={bid}")
         self.conn.send(Request(Commands.PARTICIPATE,
                        [bid.number, str(bid.price)]))
         if self.conn.poll(timeout=timeout):
             res: Response = self.conn.recv()
-            print(f"res={res}")
             if not res.result:
-                print(f"Failed. reason={res.reason}")
+                log().error(f"Failed to participate. reason={res.reason}")
             return res.result
         else:
-            print("Failed. timeout.")
+            log().error("Failed to participate. reason=timeout.")
             return False
 
     def register(self, prebid, *, timeout=60):
-        print(f"[{self.market}] PROXY::participate")
+        log().info(f"Register. market={self.name}, pre={prebid}")
         self.conn.send(Request(Commands.REGISTER,
                        [prebid.number]))
         if self.conn.poll(timeout=timeout):
             res: Response = self.conn.recv()
-            print(f"res={res}")
             if not res.result:
-                print(f"Failed. reason={res.reason}")
+                log().error(f"Failed to register. reason={res.reason}")
             return res.result
         else:
-            print("Failed. timeout.")
+            log().error("Failed to register. reason=timeout.")
             return False
 
     def finish(self, timeout=60):
-        print(f"[{self.market}] PROXY::finish")
+        log().info(f"Finish. market={self.name}")
         self.conn.send(Request(Commands.EXIT))
         if self.conn.poll(timeout=timeout):
             res: Response = self.conn.recv()
-            print(f"res={res}")
             return res.result
         else:
             return False
