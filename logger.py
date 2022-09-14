@@ -45,12 +45,12 @@ def logger_get_default_config():
         'disable_existing_loggers': True,
         "formatters": {
             "standard": {
-                "format": "%(asctime)s [%(levelname).1s] %(name)s: %(message)s"
+                "format": "%(asctime)s [%(levelname).1s] %(name).7s: %(message)s"
             }
         },
         "handlers": {
             "console": {
-                "level": "DEBUG",
+                "level": "INFO",
                 "class": "logging.StreamHandler",
                 "stream": "ext://sys.stdout",
                 "formatter": "standard"
@@ -59,7 +59,7 @@ def logger_get_default_config():
         "loggers": {
             "": {
                 "handlers": ["console"],
-                "level": "DEBUG",
+                "level": "INFO",
                 "propagate": False
             },
             "WDM": {
@@ -67,13 +67,19 @@ def logger_get_default_config():
                 "level": "CRITICAL",
                 "propagate": False
             }
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            # "propagate": True
         }
     }
-
 
 # precondition
 # base: logger.json file exists. and
 # {base}/log/{date}.log
+
+
 def logger_init(basedir: str = None, new_log_file=True):
     config = logger_get_default_config()
 
