@@ -25,7 +25,7 @@ __default_timeout = 60
 
 def _log():
     import logging
-    return logging.getLogger(__name__)
+    return logging.getLogger("safeg2b")
 
 
 # -------------------

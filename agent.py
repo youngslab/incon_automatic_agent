@@ -27,18 +27,22 @@ def log():
 
 
 def print_bids_summary(bids):
+    log().info(" --------------- ")
     log().info(" - Bids Summary ")
+    log().info(" --------------- ")
     for bid in bids:
         check = 'v' if bid.is_completed() else ' '
-        print(f"    [{check}] {bid}")
+        log().info(f"    [{check}] {bid}")
     log().info(" --------------- ")
 
 
 def print_pres_summary(pres):
+    log().info(" --------------- ")
     log().info(" - Pres Summary ")
+    log().info(" --------------- ")
     for pre in pres:
         check = 'v' if pre.is_completed() else ' '
-        print(f"    [{check}] {pre}")
+        log().info(f"    [{check}] {pre}")
     log().info(" --------------- ")
 
 

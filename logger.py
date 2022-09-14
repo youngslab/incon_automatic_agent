@@ -45,7 +45,7 @@ def logger_get_default_config():
         'disable_existing_loggers': True,
         "formatters": {
             "standard": {
-                "format": "%(asctime)s [%(levelname).1s] %(name).7s: %(message)s"
+                "format": "%(asctime)s [%(levelname).1s] %(name)7s: %(message)s"
             }
         },
         "handlers": {

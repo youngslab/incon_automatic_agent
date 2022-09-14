@@ -437,7 +437,7 @@ def _participate_v2(driver, number, cost):
 
 
 def log():
-    return logging.getLogger(__package__)
+    return logging.getLogger("kepco")
 
 
 def kepco_create_driver(headless=False):

@@ -8,7 +8,7 @@ from integ_auto import Automatic
 
 def log():
     import logging
-    return logging.getLogger(__name__)
+    return logging.getLogger("g2b")
 
 
 def _go_mypage(auto: Automatic):

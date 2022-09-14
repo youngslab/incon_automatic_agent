@@ -10,7 +10,7 @@ from integ_auto import *
 
 
 def log():
-    return logging.getLogger(__package__)
+    return logging.getLogger("d2b")
 
 
 ###########
@@ -318,6 +318,7 @@ def login(auto: Automatic, token='BIO-SEAL') -> bool:
     auto.go("https://www.d2b.go.kr/index.do")
 
     if _is_login(auto):
+        log().info("Already logged in")
         return True
 
     # login button
@@ -328,6 +329,7 @@ def login(auto: Automatic, token='BIO-SEAL') -> bool:
     # TODO: 적절한 수준 찾기
     # 3초: 가끔씩 메세지가 나오는 경우가 있다.
     # 5초로 변경
+    log().info("Wait 5 secs. Too fast to login make problem.")
     time.sleep(5)
 
     # 지문인식 로그인 버튼

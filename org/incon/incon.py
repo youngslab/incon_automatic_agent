@@ -29,7 +29,7 @@ def to_code(market_title: str):
 
 
 def log():
-    return logging.getLogger(__package__)
+    return logging.getLogger("incon")
 
 # Incon Homepage
 
@@ -239,7 +239,7 @@ class Preregistration:
         return incon_listitem_complete(self.__driver, element)
 
     def __str__(self):
-        return f"market={to_code(self.market):6s}, code={self.number:20s}, title={self.title}"
+        return f"market={to_code(self.market):7s}, code={self.number:20s}, title={self.title}"
 
 
 # ---------------------
@@ -494,7 +494,7 @@ class Bid:
         self.price = incon_bid_listitem_get_price(self.__listitem)
 
     def __str__(self):
-        return f"market={to_code(self.market):7s}, code={self.number:20s}, price={int(self.price):12,} KRW , title={self.title}"
+        return f"market={to_code(self.market):7s}, code={self.number:20s}, price={int(self.price):12,} KRW, title={self.title}"
 
     def is_completed(self):
         # find element in the list...
