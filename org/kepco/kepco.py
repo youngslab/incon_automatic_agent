@@ -530,7 +530,12 @@ def kepco_notice_close(driver: WebDriver, notice: WebElement):
     if not notice:
         log().error("Notice is none")
         return False
-    btn = notice.find_element(By.XPATH, "./div[2]/div/div/a/span/span/span[2]")
+
+    # 닫기
+    # - 일반     : /html/body/div[18]/div[2]/div/div/a/span/span/span[2]
+    # - 서부발전 : /html/body/div[24]/div[3]/div/div/a/span/span/span[2]
+
+    btn = notice.find_element(By.XPATH, "./div/div/div/a/span/span/span[2]")
     if not btn:
         log().error("Failed to find button.")
         return False
