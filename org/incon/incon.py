@@ -463,6 +463,9 @@ def incon_bid_price_all(webdriver, items):
                     f"pricing) The bid was priced. idx={idx}, retry={retry}")
                 priced = True
                 break
+            if not incon_bid_listitem_is_ready(item):
+                log().debug(f"pricing) The bid is not ready. Skip. idx={idx}")
+                break
             retry = retry + 1
             temp = Bid(webdriver, item)
             log().debug(
