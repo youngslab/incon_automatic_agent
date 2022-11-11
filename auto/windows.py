@@ -162,11 +162,11 @@ def keyboard_type(text):
 # ---------------------
 
 
-def img_find(img, grayscale=True, confidence=.9):
+def img_find(img, grayscale=True, confidence=.8):
     return pyautogui.locateCenterOnScreen(img, grayscale=grayscale, confidence=confidence)
 
 
-def img_find_all(img, grayscale=True, confidence=.9):
+def img_find_all(img, grayscale=True, confidence=.8):
     ps = pyautogui.locateAllOnScreen(
         img, grayscale=grayscale, confidence=confidence)
 
@@ -187,11 +187,11 @@ def img_find_all(img, grayscale=True, confidence=.9):
     return [center(p) for p in unique]
 
 
-def img_wait_until(img, timeout=1, grayscale=True, confidence=.9):
+def img_wait_until(img, timeout=1, grayscale=True, confidence=.8):
     return wait_until(lambda: img_find(img, grayscale=grayscale, confidence=confidence), timeout=timeout)
 
 
-def img_click(img, timeout=1, grayscale=True, confidence=.9):
+def img_click(img, timeout=1, grayscale=True, confidence=.8):
     __logger().debug(f"Click {os.path.basename(img)}")
     center = img_wait_until(img, timeout=timeout,
                             grayscale=grayscale, confidence=confidence)
@@ -203,7 +203,7 @@ def img_click(img, timeout=1, grayscale=True, confidence=.9):
     return True
 
 
-def img_type(img, msg, timeout=1, grayscale=True, confidence=.9):
+def img_type(img, msg, timeout=1, grayscale=True, confidence=.8):
     img_click(img, timeout=timeout, grayscale=grayscale, confidence=confidence)
     time.sleep(1)
 
