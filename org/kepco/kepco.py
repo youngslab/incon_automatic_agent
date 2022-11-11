@@ -228,7 +228,7 @@ def _register_v2(driver: WebDriver, number, *, cert=None):
 
     # 2.2. 중소기업확인서 첨부
     log().info("2.2 attach a file")
-    filepath = os.path.join(os.path.expanduser("~"), ".iaa", "AR_중소기업_확인서.pdf")
+    filepath = os.path.join(os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
     kepco_attach_small_business_confirmation_document(driver, filepath)
 
     # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
