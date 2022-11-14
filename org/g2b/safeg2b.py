@@ -302,11 +302,15 @@ def safeg2b_participate_2_6_bid_doc(price):
 def safeg2b_participate_2_7_bid_price_confirmation():
     auto_activate("투찰금액 확인 - SafeG2B", timeout=__default_timeout)
 
-    auto.windows.img_click(resmgr.get(
-        'safeg2b_2_7_cost_confirm_checkbox.png'), timeout=__default_timeout)
+    if not auto.windows.img_click(resmgr.get(
+        'safeg2b_2_7_cost_confirm_checkbox.png'), timeout=__default_timeout):
+        return False
 
-    auto.windows.img_click(resmgr.get(
-        'safeg2b_2_7_cost_confirm_button.png'), timeout=__default_timeout, confidence=0.8)
+    if not auto.windows.img_click(resmgr.get(
+        'safeg2b_2_7_cost_confirm_button.png'), timeout=__default_timeout, confidence=0.9):
+        return False
+
+    return True
 
 
 def safeg2b_participate_2_8_bid_lottery_number():
@@ -331,11 +335,17 @@ def safeg2b_participate_2_8_bid_lottery_number():
     # Issue: 아래 2개의 img가 비슷하여 2번 click되는 효과가 생긴다. 중간에 잠시 시간을 준다.
     auto.windows.img_click(resmgr.get(
         'safeg2b_2_8_lottery_number_confirm_button.png'), timeout=__default_timeout)
+
     # TODO: 특징있는 image를 기다리도록 변경하자.
+    time.sleep(5)
     auto.windows.img_wait_until(resmgr.get(
         'safeg2b_2_8_lottery_number_popup_characteristic.png'), timeout=__default_timeout)
-    auto.windows.img_click(resmgr.get(
-        'safeg2b_2_8_lottery_number_certi_confrim_button.png'), confidence=0.8)
+    
+    # To activate the window again
+    if not auto.windows.img_click(resmgr.get(
+        'safeg2b_2_8_lottery_number_certi_confrim_button.png'), timeout=__default_timeout):
+        return False
+    return True
 
 
 def safeg2b_participate_2_9_certificate(pw):
@@ -405,10 +415,14 @@ def safeg2b_participate(notice_no: str, price: str):
     safeg2b_participate_2_6_bid_doc(price)
 
     _log().info("2.7 투찰금액확인")
-    safeg2b_participate_2_7_bid_price_confirmation()
+    if not safeg2b_participate_2_7_bid_price_confirmation():
+        _log().error("실패: 투찰금액확인")
+        return False
 
     _log().info("2.8 추첨번호 선택")
-    safeg2b_participate_2_8_bid_lottery_number()
+    if not safeg2b_participate_2_8_bid_lottery_number():
+        _log().error("실패: 추첨번호 선택")
+        return False
 
     # _log().info("2.9 인증서 ")
     # safeg2b_participate_2_9_certificate(pw)
