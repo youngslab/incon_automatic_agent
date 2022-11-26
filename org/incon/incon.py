@@ -4,6 +4,7 @@ import random
 import logging
 
 import auto.selenium
+from org.g2b.res import resmgr
 from selenium.webdriver.common.by import By
 
 # ---------------------
@@ -14,8 +15,6 @@ from selenium.webdriver.common.by import By
 def to_code(market_title: str):
     if market_title == "국방전자조달":
         return "d2b"
-    elif market_title == "나라장터(안전입찰)":
-        return "safeg2b"
     elif market_title == "나라장터":
         return "g2b"
     elif market_title == "한국전력":
@@ -84,36 +83,6 @@ def incon_listitem_click(driver, listitem):
 
 
 # ---------------------
-# Popup
-# ---------------------
-
-# Check the popup is opened
-def incon_popup_is_open(webdriver):
-    popup_layer = (By.ID, 'layer_popup')
-    elem = auto.selenium.find_element_until(webdriver, popup_layer, 10)
-    if not elem:
-        raise Exception("Can not find layer_popup in this page")
-    # try to find "display:none"in style
-    return elem.get_attribute('style').find('display') < 0
-
-# Click the popup close button.
-
-
-def incon_popup_close(webdriver):
-    close_btn = (By.XPATH, '//*[@id="close"]/a')
-    elem = auto.selenium.find_element_until(webdriver, close_btn)
-    auto.selenium.click_element(webdriver, elem)
-
-# Click
-
-
-def incon_popup_check_do_not_open_today(webdriver):
-    todaycloseyn = (By.ID, 'todaycloseyn')
-    elem = auto.selenium.find_element_until(webdriver, todaycloseyn)
-    auto.selenium.click_element(webdriver, elem)
-
-
-# ---------------------
 # Preregistration
 # ---------------------
 
@@ -122,13 +91,18 @@ def incon_pre_go_page(driver: WebDriver):
     if driver.current_url == 'http://chodal.in-con.biz/bidmobile/msg/list.do':
         return False
     auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/msg/list.do')
+
     return True
 
 
-def incon_pre_close_popup(webdriver):
-    if incon_popup_is_open(webdriver):
-        incon_popup_check_do_not_open_today(webdriver)
-        incon_popup_close(webdriver)
+def incon_pre_close_popup(driver: WebDriver):
+    # 2022125 popup이 변경 되었음. - 안전입찰2.0 에 관련된 내용.
+    # OK button 을 눌러준다.
+    button = driver.find_element(By.XPATH, "//button[text()='OK']")
+    if button:
+        button.click()
+    else:
+        log().error("팝업이 더이상 열리지 않습니다. 팝업확인 필요합니다.")
 
 
 def incon_pre_get_listitems(webdriver):
@@ -344,7 +318,7 @@ def incon_bid_listitem_get_market(listitem):
     market_img = listitem.find_element(By.XPATH, './/a[1]/img[1]')
     img_src = market_img.get_attribute("src")
     if img_src.find("bid_title_icon1.png") >= 0:
-        return "나라장터(안전입찰)"
+        return "나라장터"
     elif img_src.find("bid_title_icon2.png") >= 0:
         return "국방전자조달"
     elif img_src.find("bid_title_icon3.png") >= 0:
