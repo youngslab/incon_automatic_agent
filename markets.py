@@ -7,7 +7,6 @@ from enum import Enum
 from org.d2b import D2B
 from org.kepco import Kepco
 from org.g2b.g2b import G2B
-from org.g2b.g2b import SafeG2B
 
 from account import account_get
 import logging
@@ -62,7 +61,7 @@ class Server:
 
     def run(self):
 
-        while(1):
+        while (1):
             if not self.conn.poll(10):
                 continue
 
@@ -101,7 +100,6 @@ class MarketType(Enum):
     D2B = "국방전자조달"
     KEPCO = "한국전력"
     G2B = "나라장터"
-    SAFEG2B = "나라장터(안전입찰)"
 
 
 class Proxy:
@@ -185,10 +183,7 @@ class MarketFactory:
             # login to support
             return Kepco(kepco_id, kepco_pw)
         elif market == MarketType.G2B:
-            pw = account_get("g2b", "pw")
-            return G2B(pw, headless=False)
-        elif market == MarketType.SAFEG2B:
-            return SafeG2B()
+            return G2B(headless=False)
 
 
 def create_market(market_name):

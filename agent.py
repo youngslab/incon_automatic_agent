@@ -12,7 +12,6 @@ _market_filter = [
     # '국방전자조달',
     # '한국전력',
     # '나라장터',
-    # '나라장터(안전입찰)'
 ]
 
 
@@ -64,14 +63,11 @@ def main():
     # markets(asynchronously)
     markets = [bid.market for bid in bids] + \
         [pre.market for pre in pres]
-    markets = list(set(markets))
-    # market reorder
-    market = markets.sort(key=lambda x: x == "나라장터(안전입찰)")
+    markets = set(markets)
     markets = [create_market(market)
                for market in markets if market not in _market_filter]
 
     for market in markets:
-
         # filter not supported markets
         if not market:
             continue
