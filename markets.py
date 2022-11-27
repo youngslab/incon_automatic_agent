@@ -7,10 +7,24 @@ from enum import Enum
 from org.d2b import D2B
 from org.kepco import Kepco
 from org.g2b.g2b import G2B
+from org.kogas.kogas import Kogas
 
-from account import account_get
+from account import account_get, account_get_raw_data
 import logging
 from logger import logger_init
+
+
+def to_code(market_title: str):
+    if market_title == "국방전자조달":
+        return "d2b"
+    elif market_title == "나라장터":
+        return "g2b"
+    elif market_title == "한국전력":
+        return "kepco"
+    elif market_title == "가스공사":
+        return "kogas"
+    else:
+        return "unknown"
 
 
 def log():
@@ -100,6 +114,7 @@ class MarketType(Enum):
     D2B = "국방전자조달"
     KEPCO = "한국전력"
     G2B = "나라장터"
+    KOGAS = "가스공사"
 
 
 class Proxy:
@@ -184,11 +199,25 @@ class MarketFactory:
             return Kepco(kepco_id, kepco_pw)
         elif market == MarketType.G2B:
             return G2B(headless=False)
+        elif market == MarketType.KOGAS:
+            try:
+                kogas_name = account_get("kogas", "manager_name")
+                kogas_phone = account_get("kogas", "manager_phone")
+                kogas_email = account_get("kogas", "manager_email")
+                return Kogas(kogas_name, kogas_phone, kogas_email)
+            except:
+                return None
+
+        return None
 
 
 def create_market(market_name):
     try:
-        market_type = MarketType(market_name)
-        return Proxy(market_type)
+        accounts = account_get_raw_data()
+        if accounts.get(to_code(market_name)) == None:
+            return None
+        else:
+            market_type = MarketType(market_name)
+            return Proxy(market_type)
     except:
         return None

@@ -19,6 +19,8 @@ def to_code(market_title: str):
         return "g2b"
     elif market_title == "한국전력":
         return "kepco"
+    elif market_title == "가스공사":
+        return "kogas"
     else:
         return "unknown"
 

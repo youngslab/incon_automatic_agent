@@ -40,3 +40,7 @@ def account_get(org: str, key: str) -> str:
         return None
 
     return __account_data[org][key]
+
+
+def account_get_raw_data():
+    return __account_data

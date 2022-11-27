@@ -66,6 +66,7 @@ def main():
     markets = set(markets)
     markets = [create_market(market)
                for market in markets if market not in _market_filter]
+    markets = [market for market in markets if market is not None]
 
     for market in markets:
         # filter not supported markets
