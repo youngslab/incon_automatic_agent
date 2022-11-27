@@ -868,7 +868,7 @@ def kepco_pre_register(driver: WebDriver, number):
 
     # 2.2. 중소기업확인서 첨부
     log().info("2.2 attach a file")
-    filepath = os.path.join(os.path.expanduser("~"), ".iaa", "AR_중소기업_확인서.pdf")
+    filepath = os.path.join(os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
     if not kepco_attach_small_business_confirmation_document(driver, filepath):
         log().error("failed to attach a file for small busineess.")
         return False
