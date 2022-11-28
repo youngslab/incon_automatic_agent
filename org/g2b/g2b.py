@@ -225,11 +225,12 @@ def g2b_participate(auto: Automatic, code, price):
             return False
         return True
 
-    time.sleep(3)
     if not _do_in_main_frame(auto, lambda: click_figerprint_bid_button()):
         log().error("지문투찰 버튼.")
         return False
 
+    # XXX: 새로운 Window 가 열릴때 너무 빨리 열리게 되면 title이 none인 경우가 생긴다.
+    time.sleep(3)
     # 새로운 window 열린다. "물품공고분류조회 - 프로필 1 - Microsoft Edge"
     title = "물품공고분류조회"
     handle = auto.get_window_handle(title)
@@ -244,8 +245,9 @@ def g2b_participate(auto: Automatic, code, price):
             return False
 
     # validation
+    time.sleep(3)    
     title = "Message: 나라장터"
-    handle = auto.get_window_handle(title, timeout=5)
+    handle = auto.get_window_handle(title, timeout=1)
     if handle:
         with auto.get_window(handle):
             if auto.get_element(By.XPATH, "//div[contains(text(), '접수되었습니다.')]"):
@@ -255,7 +257,7 @@ def g2b_participate(auto: Automatic, code, price):
                 log().error("Message: 나라장터: 알지못하는 상태입니다. 확인이 필요합니다.")
                 return False
 
-    title = "투찰공지사항"
+    title = "투찰 공지사항"
     handle = auto.get_window_handle(title)
     if not handle:
         log().error(f"{title} 윈도우를 찾을 수 없습니다.")
@@ -331,6 +333,9 @@ def g2b_participate(auto: Automatic, code, price):
         for box in boxes:
             auto.click(box)
 
+        # XXX: 너무 빠르게 지나가 버려 확인하기가 어렵다.
+        time.sleep(3)
+
         if not auto.click(By.XPATH, '//span[text()="추첨번호전송"]/..'):
             log().error("추첨번호 선택: 추첨번호전송 버튼을 찾을 수 없습니다.")
             return False
@@ -339,8 +344,6 @@ def g2b_participate(auto: Automatic, code, price):
         if not auto.accept_alert_with_text("전송하시겠습니까?"):
             log().error("추첨번호 선택: [전송하시겠습니까?] 팝업이 생성되지 않았습니다.")
             return False
-
-        time.sleep(5)
 
         # 신원확인을 합니다.? popup
         if not auto.accept_alert_with_text("신원확인을 합니다."):
@@ -351,12 +354,13 @@ def g2b_participate(auto: Automatic, code, price):
     if not auto.activate("나라장터"):
         log().error("나라장터: 윈도우가 확인되지 않았습니다.")
 
-    log().log("나라장터: 정상접수 확인")
+    log().info("나라장터: 정상접수 확인")
     if not auto.click(resmgr.get('safeg2b_2_9_confirm_button.png')):
         log().error("나라장터: OK 버튼을 찾을 수 없습니다.")
         return False
 
-    # 새로운 windows (사실 기존 윈도우에서 이름이 변경된다. )
+    # 새로운 windows (사실 기존 윈도우에서 이
+    # 름이 변경된다. )
     title = "전자입찰 송수신상세이력조회"
     handle = auto.get_window_handle(title)
     if not handle:
