@@ -100,7 +100,10 @@ def incon_pre_go_page(driver: WebDriver):
 def incon_pre_close_popup(driver: WebDriver):
     # 2022125 popup이 변경 되었음. - 안전입찰2.0 에 관련된 내용.
     # OK button 을 눌러준다.
-    button = driver.find_element(By.XPATH, "//button[text()='OK']")
+    try:
+        button = driver.find_element(By.XPATH, "//button[text()='OK']")
+    except:
+        button = None
     if button:
         button.click()
     else:
