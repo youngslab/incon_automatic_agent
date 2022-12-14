@@ -19,7 +19,7 @@ def create_data_provider():
     # create incon object
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
-    return Incon(id, pw)
+    return Incon(id, pw, headless=False)
 
 
 def log():
