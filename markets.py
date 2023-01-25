@@ -1,4 +1,12 @@
 
+# WebDriver Manager (selenium 4)
+# https://pypi.org/project/webdriver-manager/#use-with-edge
+import os
+from selenium import webdriver
+from selenium.webdriver.edge.service import Service
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
+
+
 # example of returning a variable from a process using a value
 # from asyncore import ExitNow
 from multiprocessing import Process, Pipe
@@ -184,6 +192,20 @@ class Proxy:
             return False
 
 
+def create_edge_driver(headless=False):
+    options = webdriver.EdgeOptions()
+    # level 3 is lowest value for log-level
+    options.add_argument('log-level=3')
+    if headless:
+        options.add_argument('headless')
+        options.add_argument('disable-gpu')
+
+    service = Service(EdgeChromiumDriverManager().install())
+    import time
+    time.sleep(1)
+    return webdriver.Edge(options=options, service=service)
+
+
 class MarketFactory:
     def create(market):
         if market == MarketType.D2B:
@@ -201,10 +223,13 @@ class MarketFactory:
             return G2B(headless=False)
         elif market == MarketType.KOGAS:
             try:
+                driver = create_edge_driver()
+                filepath = os.path.join(
+                    os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
                 kogas_name = account_get("kogas", "manager_name")
                 kogas_phone = account_get("kogas", "manager_phone")
                 kogas_email = account_get("kogas", "manager_email")
-                return Kogas(kogas_name, kogas_phone, kogas_email)
+                return Kogas(driver=driver, manager_name=kogas_name, manager_phone=kogas_phone, manager_email=kogas_email, small_business=filepath)
             except:
                 return None
 

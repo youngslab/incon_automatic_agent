@@ -135,6 +135,9 @@ class Kogas:
 
         self.__init_par_elements()
 
+    def init(self):
+        self.__init_par_elements()
+
     def __init_par_elements(self):
         self.kogas_par_already_done_text = browser.Element(
             self.context, desc="참여 완료 텍스트박스", by="xpath", path="//*[contains(text()[2], '투찰하였습니다.')]", parent=self.kogas_body_body_frame)
@@ -150,6 +153,14 @@ class Kogas:
 
         self.kogas_par_submit_application = browser.ClickableElement(
             self.context, desc="입찰서제출 버튼", by="xpath", path="//img[@alt='입찰서제출']", parent=self.kogas_body_body_frame)
+
+        # 안내 내용 확인
+        self.kogas_par_confirm_guidance = browser.ClickableElement(
+            self.context, desc="안내내용 확인", by="name", path="info_ck_box", parent=self.kogas_body_body_frame)
+
+        # 견적서제출 버튼
+        self.kogas_par_submit_estimate = browser.ClickableElement(
+            self.context, desc="견적서제출 버튼", by="xpath", path="//img[@alt='견적서제출']", parent=self.kogas_body_body_frame)
 
         self.kogas_par_2nd_amount_input = browser.TypeableElement(
             self.context, desc="입찰금액 재 입력", by="name", path="confirm_tot_amt", parent=self.kogas_amount_check_window)
@@ -267,18 +278,28 @@ class Kogas:
             print(f"ERROR: 상세 페이지로 이동에 실패하였습니다. {code}")
             return False
 
-        # validate
+        # validateR
         if self.kogas_par_already_done_text.exist(timeout=3):
             print(f"INFO: 이미 참여 완료하였습니다.")
             return True
 
         print(f"INFO: 입찰 금액 입력")
-        if not (self.kogas_par_confirm_check_button.click()
-                and self.kogas_par_multiple_reserve_check_boxes.click(num_elements=4)
-                and self.kogas_par_enter_amount_input.type(price)
-                and self.kogas_par_submit_application.click()):
-            print(f"ERROR: 입찰 금액 입력에 실패하였습니다. code:{code}, price:{price}")
-            return False
+        # 입찰서 제출
+        if self.kogas_par_submit_application.exist(timeout=3):
+            if not (self.kogas_par_confirm_check_button.click()
+                    and self.kogas_par_multiple_reserve_check_boxes.click(num_elements=4)
+                    and self.kogas_par_enter_amount_input.type(price)
+                    and self.kogas_par_submit_application.click()):
+                print(f"ERROR: 입찰 금액 입력에 실패하였습니다. code:{code}, price:{price}")
+                return False
+        else:  # 견적서 제출
+            if not (self.kogas_par_confirm_guidance.click()
+                    and self.kogas_par_confirm_check_button.click()
+                    and self.kogas_par_multiple_reserve_check_boxes.click(num_elements=4)
+                    and self.kogas_par_enter_amount_input.type(price)
+                    and self.kogas_par_submit_estimate.click()):
+                print(f"ERROR: 입찰 금액 입력에 실패하였습니다. code:{code}, price:{price}")
+                return False
 
         print(f"INFO: 입찰 금액 재확인.")
         if not (self.kogas_par_2nd_amount_input.type(price, force=True)
