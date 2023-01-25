@@ -245,7 +245,7 @@ def g2b_participate(auto: Automatic, code, price):
             return False
 
     # validation
-    time.sleep(3)    
+    time.sleep(3)
     title = "Message: 나라장터"
     handle = auto.get_window_handle(title, timeout=1)
     if handle:
@@ -256,6 +256,12 @@ def g2b_participate(auto: Automatic, code, price):
             else:
                 log().error("Message: 나라장터: 알지못하는 상태입니다. 확인이 필요합니다.")
                 return False
+
+    title = "투찰제어"
+    handle = auto.get_window_handle(title, timeout=5)
+    if handle:
+        log().error(f"물품등록이 마감되어 진행할 수 없습니다.")
+        return False
 
     title = "투찰 공지사항"
     handle = auto.get_window_handle(title)
