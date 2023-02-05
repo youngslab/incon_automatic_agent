@@ -236,13 +236,38 @@ class MarketFactory:
         return None
 
 
-def create_market(market_name):
+class MockProxy:
+
+    def __init__(self, market: MarketType):
+        log().info(f"Create a market={market.value}")
+        self.name = market.value
+        self.market = MarketFactory.create(market)
+
+    def login(self, *, timeout=120):
+        log().info(f"Login. market={self.name}")
+        return self.market.login()
+
+    def participate(self, bid, *, timeout=120):
+        log().info(f"Participate. market={self.name}, bid={bid}")
+        return self.market.participate(bid.number, str(bid.price))
+
+    def register(self, prebid, *, timeout=60):
+        log().info(f"Register. market={self.name}, pre={prebid}")
+        return self.market.register(prebid.number)
+
+    def finish(self, timeout=60):
+        self.market = None
+        return True
+
+
+def create_market(market_name, proxy=False):
     try:
         accounts = account_get_raw_data()
         if accounts.get(to_code(market_name)) == None:
             return None
         else:
             market_type = MarketType(market_name)
-            return Proxy(market_type)
+
+            return Proxy(market_type) if proxy else MockProxy(market_type)
     except:
         return None
