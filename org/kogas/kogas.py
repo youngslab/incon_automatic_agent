@@ -7,6 +7,7 @@ from automatic import win32
 
 class Kogas:
     def __init__(self, driver, manager_name, manager_phone, manager_email, small_business):
+        self.name = "가스공사"
         self.manager_name = manager_name
         self.manager_phone = manager_phone
         self.manager_email = manager_email
@@ -213,7 +214,7 @@ class Kogas:
         self.context.set_url("https://bid.kogas.or.kr:9443/supplier/index.jsp")
 
         # close another windows
-        self.context.close_other_windows()
+        # self.context.close_other_windows()
 
         # normalize the bid's code
         code = code.split('-')[0]
