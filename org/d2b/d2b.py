@@ -360,6 +360,8 @@ def login(auto: Automatic, token='BIO-SEAL') -> bool:
     #####################
     # 사용자의 지문 입력 #
     #####################
+    import pyautogui
+    pyautogui.alert("확인 버튼을 눌러 다음으로 넘어가세요", title="Incon Agent")
 
     log().info("Type pin number.")
     # Pin 번호 입력 - display될 때까지 기다린다.

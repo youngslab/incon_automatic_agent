@@ -5,6 +5,7 @@ from auto.windows import *
 
 from org.g2b.res import resmgr
 from auto import *
+import pyautogui
 
 
 def cert_login(pw: str) -> bool:
@@ -28,6 +29,7 @@ def cert_personal_user_login(pw: str):
     except:
         pass
     cert_login(pw)
+
 
 def cert_login_with_biotoken(pw):
 
@@ -62,12 +64,15 @@ def cert_login_with_biotoken(pw):
         log().error("Failed to find 바이오토큰 확인 버튼")
         return False
 
+    import pyautogui
+    pyautogui.alert("확인 버튼을 눌러 다음으로 넘어가세요", title="Incon Agent")
+
     # XX -> "제조사/모델명 선택" 윈도우가 종료될때 까지 기다린다.
     # 이 창은 닫힌 상태에도 계속 존재하는 것을 나온다.
     # if not wait_no_window("제조사/모델명 선택", timeout=120):
-        # if not wait_no_image(resmgr.get("certificate_bio_token_device_selection_program_installation_button.png"), timeout=60):
-        # log().error("Failed to wait 제조사/모델명 선택 closed.")
-        # return False
+    # if not wait_no_image(resmgr.get("certificate_bio_token_device_selection_program_installation_button.png"), timeout=60):
+    # log().error("Failed to wait 제조사/모델명 선택 closed.")
+    # return False
     try:
         autoit.win_wait_active("인증서 선택")
     except:
@@ -85,6 +90,7 @@ def cert_login_with_biotoken(pw):
         return False
 
     return True
+
 
 if __name__ == "__main__":
     print(cert_is_personal_user_enabled())

@@ -3,6 +3,12 @@
 import os
 from automatic import browser
 from automatic import win32
+import pyautogui
+
+
+def wait_user_input():
+    pyautogui.alert("확인 버튼을 눌러 다음으로 넘어가세요", title="Incon Agent")
+    return True
 
 
 class Kogas:
@@ -192,6 +198,7 @@ class Kogas:
                 and self.kogas_login_cert_fp_security_token_button.click()
                 and self.kogas_login_cert_fp_security_token_bio_seal_button.click()
                 and self.kogas_login_cert_fp_security_token_confirm_button.click()
+                and wait_user_input()
                 and self.kogas_login_pin_number_input_textbox.type("00000000", timeout=120)
                 and self.kogas_login_pin_number_confirm_button.click()
                 and self.kogas_login_cert_confirm_button.click()

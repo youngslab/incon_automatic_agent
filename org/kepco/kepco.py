@@ -499,6 +499,9 @@ def kepco_login(driver, id, pw, *, cert_pw=None):
     else:
         kepco_certificate_fp_login(driver)
 
+    import pyautogui
+    pyautogui.alert("확인 버튼을 눌러 다음으로 넘어가세요", title="Incon Agent")
+
     # validate login
     # 로그인 버튼이 안보이는 상태로 전환될 때 까지 기다린다.
     # XXX: 지문 로그인 이후 시간이 좀 걸린다.
