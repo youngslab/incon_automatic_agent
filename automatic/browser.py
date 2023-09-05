@@ -29,7 +29,8 @@ class Context:
         self.__current_frame = None
         self.__default_window_handle = driver.current_window_handle
         # move to the homepage
-        self.set_url(home)
+        if home:
+            self.set_url(home)
         self.default_timeout = default_timeout
         self.default_differed = default_differed
 
@@ -75,7 +76,7 @@ class Context:
                 EC.alert_is_present(), "Can not find an alert window")
             return self.__driver.switch_to.alert
         except Exception as e:
-            print(f"ERROR: Failed to get an alert. {e}")
+            # print(f"ERROR: Failed to get an alert. {e}")
             return None
 
     def get_default_window_handle(self):
@@ -279,7 +280,7 @@ class Alert:
         if self.parent is None:
             self.parent = Window(context)
 
-    def accept(self, text: str, *, timeout=None, differed=None):
+    def accept(self, text: str, *, timeout=None, differed=None, ignore=False):
         if timeout is None:
             timeout = self.context.default_timeout
 
@@ -288,7 +289,8 @@ class Alert:
 
         alert = self.context.get_alert(timeout=timeout)
         if not alert:
-            print(f"ERROR: Can't find the alert.")
+            if not ignore:
+                print(f"ERROR: Can't find the alert.")
             return False
 
         if alert.text.find(text) < 0:
@@ -498,3 +500,32 @@ class TextableElement(Element):
             time.sleep(differed)
 
         return self.element.text
+
+
+class TextableElements(Element):
+    def text(self, *, timeout=None, differed=None, force=False):
+        if timeout is None:
+            timeout = self.context.default_timeout
+
+        if differed is None:
+            differed = self.context.default_differed
+
+        # make parent activated
+        if not self.parent.activate():
+            print(f"ERROR: Can't activate parent={self.parent}")
+            return False
+
+        # find an element
+        self.element = self.context.get_elements(
+            self.by, self.path, timeout=timeout)
+
+        # validate
+        if not self.element:
+            print(f"ERROR: Can't find any elements. {self}")
+            return False
+
+        if differed:
+            time.sleep(differed)
+
+        elements = self.element
+        return [elem.text for elem in elements]

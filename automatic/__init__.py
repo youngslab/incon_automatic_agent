@@ -1,6 +1,10 @@
 
 from .browser import *
-from .win32 import *
+
+import os
+if os.name == "nt":
+    from .win32 import *
+
 
 __version__ = "0.0.1"
 
