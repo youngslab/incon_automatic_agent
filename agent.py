@@ -5,21 +5,23 @@ import logging
 from logger import logger_init
 
 from account import account_get
-from org.incon import Incon
+from org.incon.incon_mro import InconMRO
+from utils import edge
 from markets import create_market
 
 _market_filter = [
-    # '국방전자조달',
-    # '한국전력',
-    # '나라장터',
+    '국방전자조달',
+    '한국전력',
+    '나라장터',
 ]
 
 
 def create_data_provider():
     # create incon object
+    driver = edge.create_driver()
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
-    return Incon(id, pw, headless=False)
+    return InconMRO(driver, id, pw)
 
 
 def log():

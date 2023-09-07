@@ -21,6 +21,8 @@ from account import account_get, account_get_raw_data
 import logging
 from logger import logger_init
 
+from utils import edge
+
 
 def to_code(market_title: str):
     if market_title == "국방전자조달":
@@ -192,20 +194,6 @@ class Proxy:
             return False
 
 
-def create_edge_driver(headless=False):
-    options = webdriver.EdgeOptions()
-    # level 3 is lowest value for log-level
-    options.add_argument('log-level=3')
-    if headless:
-        options.add_argument('headless')
-        options.add_argument('disable-gpu')
-
-    service = Service(EdgeChromiumDriverManager().install())
-    import time
-    time.sleep(1)
-    return webdriver.Edge(options=options, service=service)
-
-
 class MarketFactory:
     def create(market):
         if market == MarketType.D2B:
@@ -223,7 +211,7 @@ class MarketFactory:
             return G2B(headless=False)
         elif market == MarketType.KOGAS:
             try:
-                driver = create_edge_driver()
+                driver = edge.create_driver()
                 filepath = os.path.join(
                     os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
                 kogas_name = account_get("kogas", "manager_name")
