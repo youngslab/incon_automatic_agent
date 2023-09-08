@@ -187,7 +187,7 @@ def login(driver: WebDriver, id, pw, cert):
     kepco_login(driver, id, pw, cert)
 
 
-def _register_v2(driver: WebDriver, number, *, cert=None):
+def _register_v2(driver: WebDriver, number):
 
     # close_all_tab
     log().info("0. 모든 탭 닫기")
@@ -199,16 +199,25 @@ def _register_v2(driver: WebDriver, number, *, cert=None):
         log().error("Failed to open register tab.")
         return False
 
+    # 알림: 공고일자의 최대 검색기간은 6개월 입니다.
+    # /html/body/div[11]/div[3]/div/div/a[1]
+    close_all_popup(driver, timeout=3)
+
     # 1.2 조회
     log().info("1.2 search")
     # ID: Kepco - 입찰 - 공고번호 검색
     # 공고번호 입력
-    num_input = wait_clickable(driver, (By.XPATH, '//input[@title="공고번호"]'))
-    num_input.send_keys(number)
+    if not auto_type(driver, (By.XPATH, '//input[@title="공고번호"]'), number):
+        log().error("Failed to type 공고번호.")
+        return False
+    # num_input.send_keys(number)
 
     # 조회 버튼 클릭
-    search_btn = wait_clickable(driver, (By.XPATH, '//span[text()="조회"]'))
-    search_btn.click()
+    # search_btn = wait_clickable(driver, (By.XPATH, '//span[text()="조회"]'))
+    # search_btn.click()
+    if not auto_click(driver, (By.XPATH, '//span[text()="조회"]')):
+        log().error("Failed to click 조회")
+        return False
 
     #  1.3
     log().info("1.3 validate")
@@ -252,11 +261,6 @@ def _register_v2(driver: WebDriver, number, *, cert=None):
     if not kepco_pre_confirm_submission(driver):
         # "입찰참가신청등록 화면에 있는 닫기버튼을 눌러 다시 신청하세요."
         return False
-
-    # 3.2 certificate login (Optional)
-    if cert:
-        log().info("3.2 certifiate")
-        kepco_certificate_login(driver, cert)
 
     # 확인 버튼 클릭(알림: 제출 하였습니다.
     log().info("3.3 done")
@@ -461,46 +465,67 @@ def kepco_go_homepage(driver):
     driver.get("https://srm.kepco.net/index.do")
 
 
-def kepco_certificate_login(driver, pw):
-    with Frame(driver, (By.XPATH, '//iframe[contains(@src,"kica/WebUI/kepco_html/kicaCert.jsp")]'), timeout=30):
-        auto_click(driver, By.XPATH, '//div[text()="사업자(범용)"]', timeout=60)
-        auto_type(driver, By.ID, "certPwd", pw)
-        auto_click(driver, By.XPATH, '//img[@src="../img/btn_confirm.png"]')
-
-
 # fp_login(finger_print)
 # XXX: input token - BIO-SEAL could be changed
 def kepco_certificate_fp_login(driver):
+    # 2023-05-15: 지문인증 방식 변경됨
 
-    with Frame(driver, (By.XPATH, '//iframe[contains(@src,"kica/WebUI/kepco_html/kicaCert.jsp")]'), timeout=30):
-        # XXX: 바로 바이오 토큰을 선택하면 인증서가 남아 있는 현상이 있는데 이를
-        # 제거하기 위해 잠시 시간을 갖는다.
-        time.sleep(1.5)
+    with Frame(driver, (By.XPATH, '//iframe[contains(@title,"LOGIN")]')):
 
-        # select certificate location: bio-token
-        auto_click(driver, By.XPATH, '//button[text()="바이오토큰"]')
-        auto_click(driver, By.XPATH,
-                   '//*[@id="js-seltab"]/li[5]/div/ul/li/a[contains(text(), "BIO-SEAL")]')
-    # login as usual
-    return kepco_certificate_login(driver, "00000000")
+        # 확장매체
+        if not auto_click(driver, By.XPATH, '//*[@id="MediaSet_1"]/li[5]/button'):
+            return False
+
+        # 지문보안토큰
+        if not auto_click(driver, By.XPATH, '//*[@id="NX_MEDIA_BIOHSM_EX"]'):
+            return False
+
+        # BIO-SEAL
+        if not auto_click(driver, By.XPATH, '//*[contains(@id,"BIO-SEAL")]'):
+            return False
+
+        # 확인버튼
+        if not auto_click(driver, By.XPATH,
+                          '//*[@id="pki-extra-media-box-contents3"]/div[3]/button[1]'):
+            return False
+
+        # 사용자 입력
+        import pyautogui
+        pyautogui.alert("확인 버튼을 눌러 다음으로 넘어가세요", title="Incon Agent")
+
+        # 보안토큰 비밀번호 입력
+        if not auto_type(driver, By.XPATH, '//*[@id="nx_cert_pin"]', "00000000"):
+            return False
+
+        # 확인버튼 (비밀번호 확인)
+        if not auto_click(driver, By.XPATH,
+                          '//*[@id="pki-extra-media-box-contents3"]/div[2]/button[1]'):
+            return False
+
+        # 확인버튼 (인증서선택 확인)
+        if not auto_click(driver, By.XPATH,
+                          '//*[@id="nx-cert-select"]/div[4]/button[1]'):
+            return False
+
+    return True
 
 
 def kepco_login(driver, id, pw, *, cert_pw=None):
+
     with Frame(driver, (By.ID, "mdiiframe-1010-iframeEl")) as f:
         auto_click(driver, By.ID, 'memberLogin')
 
-    with Frame(driver, (By.ID, 'kepcoLoginPop')):
+    time.sleep(5)
+    with Frame(driver, (By.XPATH, '//div/div/iframe')):
         auto_type(driver, By.ID, 'username', id)
         auto_type(driver, By.ID, 'password', pw)
         auto_click(driver, By.ID, 'certBtn')
 
-    if cert_pw:
-        kepco_certificate_login(driver, cert_pw)
-    else:
+    try:
         kepco_certificate_fp_login(driver)
-
-    import pyautogui
-    pyautogui.alert("확인 버튼을 눌러 다음으로 넘어가세요", title="Incon Agent")
+    except Exception as e:
+        print(e)
+        return False
 
     # validate login
     # 로그인 버튼이 안보이는 상태로 전환될 때 까지 기다린다.
@@ -560,7 +585,7 @@ def kepco_get_messagebox(driver: WebDriver, timeout=60) -> WebElement:
 
 def kepco_messagebox_is_open(msgbox: WebElement):
     if not msgbox:
-        log().error("Message box is none")
+        # log().error("Message box is none")
         return False
     return True if msgbox.get_attribute("class").find("x-hidden-offsets") < 0 else False
 
@@ -574,7 +599,7 @@ def kepco_messagebox_button_get_text(button: WebElement):
 
 def kepco_messagebox_get_buttons(messagebox: WebElement):
     if not messagebox:
-        log().error("Message box is none")
+        # log().error("Message box is none")
         return None
     return messagebox.find_elements(By.XPATH, "./div[3]/div/div/a")
 
@@ -656,12 +681,18 @@ def kepco_pre_search_notice_number(driver: WebDriver, number):
 
 
 def kepco_pre_is_current_registered(driver: WebDriver):
+
+    # TODO: 너무 빨리 열려서 panel을 찾을 수 없는 경우가 있다.
+    # time.sleep(3)
+
+    print("find registration panel")
     # Validate the result
     panel = kepco_pre_get_regigteration_panel(driver)
     if not panel:
         log().error("Failed to find registration panel.")
         return False
 
+    print("wait for a column")
     # Should wait until it shows.
     status = auto_find_element(
         panel, By.XPATH, ".//div[1]/div[1]/div[1]/div[2]/div[3]/div[2]/div[1]/div[2]/div[2]/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[3]/div[1]")
@@ -838,72 +869,6 @@ def kepco_pre_confirm_done(driver: WebDriver):
     if not auto_click(driver, button):
         log().error("Failed to click 확인 buttons")
         return False
-
-    return True
-
-
-def kepco_pre_register(driver: WebDriver, number):
-
-    # 1. 공고번호 조회
-
-    # 1.1 입찰 참가신청 페이지로 이동
-    kepco_pre_go_register_page(driver)
-
-    # 1.2 조회
-    log().info("1.2 search")
-    kepco_pre_search_notice_number(driver, number)
-
-    #  1.3
-    log().info("1.3 validate")
-    if kepco_pre_is_current_registered(driver):
-        log().info("Already registered")
-        return True
-
-    log().info("1.4 apply")
-    if not kepco_pre_apply_participation(driver):
-        log().error("Failed to apply")
-        return False
-
-    # 2. Application Form
-    # 2.1.  메세지등의 팝업을 처리한다.
-    log().info("2.1 close popup")
-    kepco_pre_close_popup(driver)
-
-    # 2.2. 중소기업확인서 첨부
-    log().info("2.2 attach a file")
-    filepath = os.path.join(os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
-    if not kepco_attach_small_business_confirmation_document(driver, filepath):
-        log().error("failed to attach a file for small busineess.")
-        return False
-
-    # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
-    time.sleep(10)
-
-    # 모든 조항에 동의
-    log().info("2.3 aggreement")
-    kepco_pre_agree_commitments(driver)
-
-    # XXX: 빠르게 진행하기 때문에 다시 제출하라는 문구가 뜨는 것 같음
-    time.sleep(10)
-
-    # 2.3 제출 버튼 클릭
-    log().info("2.4 submit")
-    kepco_pre_submit_application_form(driver)
-
-    # 3. 정리
-    # 3.1 확인
-    # XXX: 제출 버튼을 클릭한 후, popup이open될 때 까지 기다린다.
-    log().info("3.1 confirm")
-    if not kepco_pre_confirm_submission(driver):
-        # "입찰참가신청등록 화면에 있는 닫기버튼을 눌러 다시 신청하세요."
-        return False
-
-    # 3.2 certificate login
-    log().info("3.2 certifiate")
-    kepco_certificate_login(driver, "GetLastError#2")
-
-    log().info("3.3 done")
-    kepco_pre_confirm_done(driver)
 
     return True
 

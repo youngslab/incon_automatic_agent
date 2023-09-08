@@ -42,14 +42,21 @@ class Callbacks():
 class Bid:
     def __init__(self, market, text, price, callbacks):
         tokens = text.split('\n')
+        self.text = text
         self.market = market
         self.number = tokens[0].strip()
         self.title = tokens[1].strip()
         self.price = price.replace(",", "")
         self.callbacks = callbacks
 
+        # TODO: define more specific
+        self.is_ready = True
+
     def complete(self):
         self.callbacks.complete(self.number)
+
+    def is_completed(self):
+        return "입찰참여완료" in self.text
 
     def __str__(self):
         return f"market={self.market:7s}, code={self.number:20s}, price={int(self.price):12,} KRW, title={self.title}"
@@ -59,6 +66,7 @@ class Preregistration:
     def __init__(self, text, callbacks):
         self.callbacks = callbacks
         self.table = dict()
+        self.text = text
         tokens = text.split('\n')
         for token in tokens:
             sep = token.find(":")
@@ -69,6 +77,10 @@ class Preregistration:
 
     def complete(self):
         self.callbacks.complete(self.number)
+
+    def is_completed(self):
+        return "사전등록완료" in self.text
+
 
     def __str__(self):
         return f"market={self.market:7s}, code={self.number:20s}, title={self.title}"
@@ -163,8 +175,8 @@ class InconMRO:
         items = []
 
         for market, description in zip(markets.text(), descriptions.text()):
-            # filter: 1. 취소, 2. 사전등록완료
-            if "취소" in description or "사전등록완료" in description:
+            # filter: 1. 취소
+            if "취소" in description:
                 continue
             if market == "한국전력":
                 items.append(PreDataKepco(description, callbacks))
@@ -208,10 +220,7 @@ class InconMRO:
         bids = []
         for market, price, description, sort in zip(markets, prices, descriptions, sorts):
             if "개시전" in sort:
-                continue
-            if "입찰참여완료" in description:
-                continue
-
+                continue            
             bids.append(Bid(market, description, price, callbacks))
 
         return bids
@@ -285,8 +294,17 @@ class InconMRO:
         return True
 
     def complete_pre(self, num):
+        # pre condition: should be in the pre-registration page        
+        pre_reg_page = "https://www.incon-mro.com/shop/preregistrationlist.php"
+        if self.context.get_url is not pre_reg_page:
+            self.context.set_url(pre_reg_page)
+
+        # NOTE: 
+        # text() -> . 
+        # 열이 다른 항목은 text()[1] 혹은 text()[2] 와 같이 접근해야 한다.
+        # ex) <td> xxx <br> yyy </td> 
         check_btn = browser.ClickableElement(
-            self.context, "xpath", f"//td[contains(text(),'{num}')]/../td/label")
+            self.context, "xpath", f"//td[contains(.,'{num}')]/../td/label")
         check_btn.click()
 
         btn = browser.ClickableElement(
@@ -297,8 +315,13 @@ class InconMRO:
         return popup.accept("선택한 입찰공고를 사전등록하셨습니까?")
 
     def bid_complete(self, num):
+        # pre condition: should be in the sourcing page        
+        sourcing_page = "https://www.incon-mro.com/shop/sourcingcompletelist.php"
+        if self.context.get_url is not sourcing_page:
+            self.context.set_url(sourcing_page)
+
         check_btn = browser.ClickableElement(
-            self.context, "xpath", f"//p[contains(text(),'{num}')]/../../../td/label")
+            self.context, "xpath", f"//p[contains(.,'{num}')]/../../../td/label")
         check_btn.click()
 
         btn = browser.ClickableElement(

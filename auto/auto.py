@@ -230,7 +230,13 @@ def auto_type(element: WebElement, text: str) -> bool:
 
 @dispatch
 def auto_type(driver: WebDriver, locator: Tuple[str, str], text: str, timeout: int = __default_timeout) -> bool:
-    element = auto_find_element(driver, locator, timeout)
+    # element = auto_find_element(driver, locator, timeout)
+    wait = WebDriverWait(driver, timeout)
+    element = wait.until(EC.element_to_be_clickable(locator))
+
+    # Need to be clickable?
+    # WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(driver, element))
+
     if not element:
         return False
     return auto_type(element, text)

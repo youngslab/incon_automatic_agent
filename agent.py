@@ -11,8 +11,8 @@ from markets import create_market
 
 _market_filter = [
     '국방전자조달',
-    '한국전력',
-    '나라장터',
+    # '한국전력',
+    # '나라장터(기타)',
 ]
 
 
@@ -51,6 +51,7 @@ def print_pres_summary(pres):
 def main():
 
     dp = create_data_provider()
+    dp.login()
 
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
@@ -62,12 +63,20 @@ def main():
     print_bids_summary(bids)
     bids = [bid for bid in bids if bid.is_ready and not bid.is_completed()]
 
-    # markets(asynchronously)
-    markets = [bid.market for bid in bids] + \
-        [pre.market for pre in pres]
-    markets = set(markets)
-    markets = [create_market(market)
-               for market in markets if market not in _market_filter]
+    markets = []
+    # explicit market from user input
+    if len(sys.argv) == 2:
+        market = sys.argv[1]
+        print(f"Create a market \"{market}\" explicitly.")
+        markets = [create_market(market)]
+    else:
+        # markets(asynchronously)
+        markets = [bid.market for bid in bids] + \
+            [pre.market for pre in pres]
+        markets = set(markets)
+        markets = [create_market(market)
+                   for market in markets if market not in _market_filter]
+
     markets = [market for market in markets if market is not None]
 
     for market in markets:

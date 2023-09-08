@@ -221,7 +221,7 @@ class Kogas:
         self.context.set_url("https://bid.kogas.or.kr:9443/supplier/index.jsp")
 
         # close another windows
-        # self.context.close_other_windows()
+        self.context.close_other_windows()
 
         # normalize the bid's code
         code = code.split('-')[0]
@@ -255,6 +255,7 @@ class Kogas:
 
         # 중소기업 확인서 파일 첨부
         if self.kogas_register_attach_file_button.click() \
+                and self.kogas_main_window_popup.accept("", timeout=3, ignore=True) \
                 and self.file_chooser_edit_box.type(small_business) \
                 and self.file_chooser_ok_button.click(differed=3):
             print(f"ERROR: 중소기업 확인서 파일 첨부 실패하였습니다.")

@@ -27,7 +27,7 @@ from utils import edge
 def to_code(market_title: str):
     if market_title == "국방전자조달":
         return "d2b"
-    elif market_title == "나라장터":
+    elif market_title == "나라장터(기타)":
         return "g2b"
     elif market_title == "한국전력":
         return "kepco"
@@ -123,7 +123,7 @@ class Server:
 class MarketType(Enum):
     D2B = "국방전자조달"
     KEPCO = "한국전력"
-    G2B = "나라장터"
+    G2B = "나라장터(기타)"
     KOGAS = "가스공사"
 
 

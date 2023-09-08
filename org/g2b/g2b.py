@@ -95,7 +95,11 @@ def _register_product(auto: Automatic):
     if not _do_in_main_frame(auto, lambda: click_register_button()):
         return False
 
-    handle = auto.get_window_handle("Message: 나라장터")
+    # 20230415: sometime there is no messages to click
+    handle = auto.get_window_handle("Message: 나라장터", timeout=5)
+    if handle == None:
+        return True
+
     with auto.get_window(handle):
         if not auto.click(By.XPATH, '//*[@id="container3"]/div[2]/div/a'):
             log().error("Failed to click 확인 버튼")
@@ -317,6 +321,10 @@ def g2b_participate(auto: Automatic, code, price):
 
     with auto.get_window(handle):
         log().info("투찰금액 확인")
+        # XXX: 너무 빨리 확인 버튼을 누르게 되면 금액이 입력 되지 않안 입찰급액을 확인하라는 팝업이 떴다.
+        # 아마도 네트워크가 느린 상황에서 발생되는 이슈로 보인다.
+        time.sleep(3)
+
         if not auto.click(By.ID, "noticeCheckY"):
             log().error("투찰금액 확인: 확인 체크버튼을 찾을 수 없습니다.")
             return False

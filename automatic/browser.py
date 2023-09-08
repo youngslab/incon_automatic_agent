@@ -42,6 +42,8 @@ class Context:
         handles = self.__driver.window_handles
         handles.remove(current)
         for handle in handles:
+            if current == handle:
+                continue
             self.__driver.switch_to.window(handle)
             self.__driver.close()
         self.__driver.switch_to.window(current)
@@ -296,6 +298,10 @@ class Alert:
         if alert.text.find(text) < 0:
             print(
                 f"ERROR: Can't find the text in the alert. expected:{text}, real:{alert.text}")
+            if not ignore:
+                print(f"But it's exected. It's not an error.")
+                return True
+
             return False
 
         if differed:

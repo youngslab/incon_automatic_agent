@@ -384,7 +384,8 @@ def login(auto: Automatic, token='BIO-SEAL') -> bool:
     auto.click(By.ID, '_closeBtn1', timeout=3)
 
     # Valiate - 로그아웃 버튼 확인
-    if not auto.get_element(By.ID, '_logoutBtn', timeout=10):
+    # 10s -> 60s timeout 변경함. 최근들어 로그인 완료 시점으로 진입하기 까지 많은 시간이 걸림
+    if not auto.get_element(By.ID, '_logoutBtn', timeout=60):
         log().error("실패 -  로그아웃 버튼을 확인 할 수 없습니다.")
         return False
 
