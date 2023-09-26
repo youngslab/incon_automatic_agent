@@ -219,8 +219,8 @@ class InconMRO:
         # generate data
         bids = []
         for market, price, description, sort in zip(markets, prices, descriptions, sorts):
-            if "개시전" in sort:
-                continue            
+            if "개시전" in sort or "취소" in sort:
+                continue
             bids.append(Bid(market, description, price, callbacks))
 
         return bids
@@ -281,7 +281,7 @@ class InconMRO:
 
         nums = []
         for sort, description in zip(sorts, descriptions.text()):
-            if "개시전" in sort:
+            if "개시전" in sort or "취소" in sort:
                 continue
             if "채택완료" in description:
                 continue
