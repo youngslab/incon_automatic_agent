@@ -9,12 +9,27 @@ import pyautogui
 
 
 def cert_login(pw: str) -> bool:
+    log().info("인증서 로그인 시작")
     cert_hwnd = window_wait_until("인증서 선택", timeout=30)
     if cert_hwnd is None:
         return False
-    bring_window_to_top(cert_hwnd)
-    img_type(resmgr.get('certificate_password_input.png'), pw, timeout=10)
-    img_click(resmgr.get('certificate_password_confirm_button.png'))
+    
+    log().info("인증서 선택 윈도우를 최상단으로 이동")
+    if not bring_window_to_top(cert_hwnd):
+        log().error("Window를 최상단으로 배치할 수 없습니다.")
+        return False
+
+    log().info("인증서 선택 윈도우에서 패스워드입력")
+    if not img_type(resmgr.get('certificate_password_input.png'), pw, timeout=10, confidence=0.8):
+        log().error("certificate_password_input 을 찾을 수 없습니다.")
+        return False
+    
+    log().info("인증서 선택 윈도우에서 확인 버튼 클릭")
+    if not img_click(resmgr.get('certificate_password_confirm_button.png')):
+        log().error("certificate_password_confirm_button 을 찾을 수 없습니다.")
+        return False
+    
+    log().info("인증서 로그인 종료")
     return True
 
 

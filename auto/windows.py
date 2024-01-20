@@ -54,6 +54,7 @@ def bring_window_to_top(hwnd):
     if fore_tid != curr_tid:
         win32process.AttachThreadInput(curr_tid, fore_tid, False)
 
+    return True
 # x, y points are in application coordiate.
 # You can find application coordinate by inspecting event via spy++
 
@@ -204,11 +205,13 @@ def img_click(img, timeout=1, grayscale=True, confidence=.9):
 
 
 def img_type(img, msg, timeout=5, grayscale=True, confidence=.9):
-    img_click(img, timeout=timeout, grayscale=grayscale, confidence=confidence)
+    if not img_click(img, timeout=timeout, grayscale=grayscale, confidence=confidence):
+        return False
     time.sleep(1)
 
     pyautogui.typewrite(msg)
     time.sleep(1)
+    return True
 
 
 def img_test(img):

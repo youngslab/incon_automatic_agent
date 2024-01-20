@@ -1,4 +1,5 @@
 
+import threading
 from selenium.webdriver.common.by import By
 from org.g2b.safeg2b import *
 from org.g2b import safeg2b
@@ -8,7 +9,9 @@ from integ_auto import Automatic
 
 def log():
     import logging
-    return logging.getLogger("g2b")
+    logger = logging.getLogger("g2b")
+    logger.setLevel(logging.DEBUG)
+    return logger
 
 
 def _go_mypage(auto: Automatic):
@@ -178,6 +181,8 @@ def register(auto: Automatic, pns):
 def login(auto: Automatic, password):
     go_homepage(auto)
 
+    
+
     member_frame = auto.get_element(By.ID, 'member_iframe')
     if not member_frame:
         log().error("Failed to find member frame")
@@ -185,16 +190,80 @@ def login(auto: Automatic, password):
 
     # click the login button
     with auto.get_frame(member_frame):
+        if not auto.click(By.XPATH, '//*[@id="arg_exceptionLogin"]'):
+            log().error("Failed to click 지문인식 예외적용 로그인 button")
+            return False
+        
         if not auto.click(By.XPATH, '//*[@id="logout"]/ul/li[1]/ul/li/a/img'):
             log().error("Failed to click Login Button")
             return False
 
+    # "계속 진행하시겠습니까?" 
+    if not auto.accept_alert_with_text("계속 진행하시겠습니까?"):
+        log().error("지문인식 예외적용: [계속 진행하시겠습니까?] 팝업이 생성되지 않았습니다.")
+        return False
+
+
+
+    # NOTE: 기업 인증서.   
     # try to login with certificate
+    log().info("기업 인증서 로그인")
     import org.g2b.certificate
-    return org.g2b.certificate.cert_login(password)
+    if not org.g2b.certificate.cert_login(password):
+        log().error("Failed to login with certification(w/o 지문입력)")
+        return False
 
+    # 주민번호
+    sub_frame = auto.get_element(By.ID, 'sub')
+    if not sub_frame:
+        log().error("하단 프레임을 찾을 수 없습니다. ")
+        return False
 
-def g2b_participate(auto: Automatic, code, price):
+    with auto.get_frame(sub_frame):
+        log().info("주민번호 입력")
+        if not auto.type(By.ID, 'jmbeonho1', "831119") or not auto.type(By.ID, 'jmbeonho2', "1178813"):
+            log().error("Failed to input 주민번호")
+            return False
+
+  
+        # WARNING!!! 
+        # click함수가 종료되기 위해선 개인이증서 로그인이 완료되어야 하기 때문에
+        # 별도에 thread에서 click 을 동작한후 join해야 한다. 
+        # 그렇지 않으면 block되어서 진행이 안된다.
+        click = lambda: auto.click(By.XPATH, '//span[text()="확인"]/..')
+        thr = threading.Thread(target=click )
+        thr.start()
+
+        # log().info("주민번화 확인버튼")
+        # if not auto.click(By.XPATH, '//span[text()="확인"]/..'):
+        #     log().error("Failed to click 확인 button for 주민번호")
+        #     return False
+    
+        # time.sleep(3)
+        log().info("개인인증서 로그인")
+        # NOTE: 개인 인증서. password가 같아야한다.
+        if not org.g2b.certificate.cert_login(password):
+            log().error("Failed to login with certification(w/o 지문입력)")
+            return False
+        
+        thr.join()
+
+    title = "Message: 나라장터"
+    log().info("Window focus 변경 - {title}")
+    handle = auto.get_window_handle(title)
+    if not handle:
+        log().error(f"{title} 윈도우를 찾을 수 없습니다.")
+        return False
+    
+    with auto.get_window(handle):
+        log().info("예외적용자 확인")
+        if not auto.click(By.XPATH, "//span[text()='확인']/.."):
+            log().error(f"확인버튼을 찾을 수 없습니다.")
+            return False
+    
+    return True
+
+def g2b_participate(auto: Automatic, code, price, password):
 
     # * 입찰정보 click
     tops_frame = auto.get_element(By.ID, 'tops')
@@ -304,6 +373,13 @@ def g2b_participate(auto: Automatic, code, price):
             log().error("물품구매입찰서: 가격 입력란을 찾을 수 없습니다.")
             return False
 
+        # 가격 입력후 바로 아래과정을 진행 하게 되면 가격을 입력해야 한다는 팝업이 뜬다. 
+        # 가격 입력후 focus를 변경해 주어야 한다. 
+        # 아래 단계는 단순히 가격입력 textbox의 focus를 다른곳으로 돌리는 역할을 한다.
+        if not auto.type(By.XPATH, "//*[@id='attachFile']/tbody/tr/td[2]/input", ""):
+            log().error("문서명 입력 textbox를 찾을 수 없습니다.")
+            return False
+
         if not auto.click(By.ID, "checkCleanContract"):
             log().error("물품구매입찰서: 청렴 계약 동의 체크확인 버튼을 찾을 수 없습니다.")
             return False
@@ -359,9 +435,20 @@ def g2b_participate(auto: Automatic, code, price):
             log().error("추첨번호 선택: [전송하시겠습니까?] 팝업이 생성되지 않았습니다.")
             return False
 
+        # [입찰에 참여할 수 있습니다.]
+        if not auto.accept_alert_with_text("입찰에 참여할 수 있습니다."):
+            log().error("개인인증서 선택창")
+            return False
+        
+        # 개인인증서
         # 신원확인을 합니다.? popup
-        if not auto.accept_alert_with_text("신원확인을 합니다."):
-            log().error("추첨번호 선택: [전송하시겠습니까?] 팝업이 생성되지 않았습니다.")
+        # if not auto.accept_alert_with_text("신원확인을 합니다."):
+        #     log().error("추첨번호 선택: [신원확인을 합니다] 팝업이 생성되지 않았습니다.")
+        #     return False
+        
+        log().info("개인인증서 로그인")
+        if not org.g2b.certificate.cert_login(password):
+            log().error("Failed to login with certification(w/o 지문입력)")
             return False
 
     # 전송 완료 후 java에서 띄우는 팝업
@@ -409,14 +496,21 @@ def g2b_login_with_biotoken(auto: Automatic):
 
 
 class G2B:
-    def __init__(self, close_windows=True, headless=True):
+    def __init__(self, pw=None, close_windows=True, headless=True):
         self.auto = Automatic.create(Automatic.DriverType.Edge)
         self.__close_windows = close_windows
+        self.pw = pw
 
     def login(self):
-        if not g2b_login_with_biotoken(self.auto):
-            log().error("Failed to login")
-            return False
+        if self.pw:
+            
+            if not login(self.auto, self.pw):
+                log().error("Failed to login")
+                return False
+        else:
+            if not g2b_login_with_biotoken(self.auto):
+                log().error("Failed to login")
+                return False
 
         # Frame이 변경되는데 변경되기전 frame에서 logout button을 찾기 때문에 실패한다.
         # element 찾을 때 frame도 다시 찾는 방법으로 문제를 해결한다.
@@ -451,4 +545,4 @@ class G2B:
 
     def participate(self, code, price):
         log().info(f"participate in {code} price={price}")
-        return g2b_participate(self.auto, code, price)
+        return g2b_participate(self.auto, code, price, self.pw)

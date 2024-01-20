@@ -27,7 +27,7 @@ from utils import edge
 def to_code(market_title: str):
     if market_title == "국방전자조달":
         return "d2b"
-    elif market_title == "나라장터(기타)":
+    elif market_title == "나라장터":
         return "g2b"
     elif market_title == "한국전력":
         return "kepco"
@@ -123,7 +123,7 @@ class Server:
 class MarketType(Enum):
     D2B = "국방전자조달"
     KEPCO = "한국전력"
-    G2B = "나라장터(기타)"
+    G2B = "나라장터"
     KOGAS = "가스공사"
 
 
@@ -208,7 +208,8 @@ class MarketFactory:
             # login to support
             return Kepco(kepco_id, kepco_pw)
         elif market == MarketType.G2B:
-            return G2B(headless=False)
+            g2b_pw = account_get("g2b", "pw")
+            return G2B(headless=False, pw=g2b_pw)
         elif market == MarketType.KOGAS:
             try:
                 driver = edge.create_driver()

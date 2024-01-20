@@ -73,7 +73,10 @@ def main():
         # markets(asynchronously)
         markets = [bid.market for bid in bids] + \
             [pre.market for pre in pres]
-        markets = set(markets)
+        markets = set(markets)  
+        print("markets")
+        print(markets)
+
         markets = [create_market(market)
                    for market in markets if market not in _market_filter]
 

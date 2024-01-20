@@ -59,7 +59,7 @@ class Bid:
         return "입찰참여완료" in self.text
 
     def __str__(self):
-        return f"market={self.market:7s}, code={self.number:20s}, price={int(self.price):12,} KRW, title={self.title}"
+        return f"market={self.market:7s}, code={self.number:20s}, price={int(float(self.price)):12,} KRW, title={self.title}"
 
 
 class Preregistration:
@@ -99,7 +99,7 @@ class PreDataG2B(Preregistration):
         super().__init__(text, callbacks)
         self.number = self.table["세부품명번호"]
         self.title = self.table["세부품명"]
-        self.market = "나라장터(기타)"
+        self.market = "나라장터"
 
 
 class PreDataD2B(Preregistration):
@@ -165,10 +165,10 @@ class InconMRO:
             "https://www.incon-mro.com/shop/preregistrationlist.php")
 
         markets = browser.TextableElements(
-            self.context, "xpath", "//td[@class='td_pa_num']")
+            self.context, "xpath", "//td[contains(@class,'td_pa_num')]")
 
         descriptions = browser.TextableElements(
-            self.context, "xpath", "//td[@class='td_pa_name']")
+            self.context, "xpath", "//td[contains(@class,'td_pa_name')]")
 
         callbacks = Callbacks(self.complete_pre)
 
@@ -180,7 +180,7 @@ class InconMRO:
                 continue
             if market == "한국전력":
                 items.append(PreDataKepco(description, callbacks))
-            elif market == "나라장터(기타)":
+            elif market == "나라장터":
                 items.append(PreDataG2B(description, callbacks))
             elif market == "국방전자조달":
                 items.append(PreDataD2B(description, callbacks))
@@ -204,7 +204,7 @@ class InconMRO:
             self.context, "xpath", "//td[@class='td_pa_name']").text()
 
         markets = browser.TextableElements(
-            self.context, "xpath", "//td[@class='td_pa_site']").text()
+            self.context, "xpath", "//td[contains(@class,'td_pa_site')]/a").text()
 
         # 가격
         prices = browser.TextableElements(
@@ -321,7 +321,7 @@ class InconMRO:
             self.context.set_url(sourcing_page)
 
         check_btn = browser.ClickableElement(
-            self.context, "xpath", f"//p[contains(.,'{num}')]/../../../td/label")
+            self.context, "xpath", f"//a[contains(.,'{num}')]/../../../td/label")
         check_btn.click()
 
         btn = browser.ClickableElement(
