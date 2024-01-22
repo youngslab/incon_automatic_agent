@@ -72,27 +72,26 @@ def _go_bid_detail_page(auto: Automatic, number):
 # ID: D2B - 견적서 작성(w/o 참가신청)
 # Precondition: 견적서작성 페이지여야 한다.
 def _write_estimate(auto: Automatic, cost) -> bool:
-    # 1. 견적금액 작성
+    log().info("견적금액 작성")
     if not auto.type(By.ID, "input_amount", cost):
         log().error("Failed to find 견적금액 input")
         return False
-
-    # 2. 복수예비가격 선택: 2개
+    
+    log().info("복수예비가격 선택: 2개")
     check_boxes = auto.get_elements(
         By.XPATH, '//input[@name="check_multi_price"]')
     check_boxes = random.choices(check_boxes, k=2)
     for box in check_boxes:
-        print(box)
         auto.click(box)
 
     time.sleep(3)
 
-    # 3. 제출 버튼 click
+    log().info("제출 버튼 click")
     if not auto.click(By.ID, "btn_submit"):
         log().error("Failed to find 제출 button")
         return False
 
-    # 4. 견적서 제출 확인 popup
+    log().info("# 견적서 제출 확인 popup")
     if not auto.accept_alert():
         log().error("Failed to find 제출 확인 메세지")
         return False
@@ -114,8 +113,9 @@ def _need_registration(auto: Automatic, number) -> bool:
 # Condition: 입찰건 detail page에서 "견적서작성" 버튼이 있어야 한다.
 
 
-def _participate_without_registration(auto: Automatic, number, cost) -> bool:
+def _participate_without_registration(auto: Automatic, number, cost, cert_pw) -> bool:
 
+    log().info("사전등록이 필요없는 입찰 참가 시작")
     # 1. 아이템을 검색한다.
     _go_bid_detail_page(auto, number)
 
@@ -126,18 +126,30 @@ def _participate_without_registration(auto: Automatic, number, cost) -> bool:
         return False
 
     # 3. 서약서 작성
+    log().info("서약서 작성")
     if not _agree_oath_2(auto):
         log().error("Failed to write oath(2).")
         return False
 
     # 4. 견적서 작성
+    log().info("견적서 작성")
     if not _write_estimate(auto, cost):
         log().error("Failed to write estimate.")
         return False
+    
+    #  지문인식 예외 - 예외입찰 버튼
+    log().info("지문인식 예외입찰 확인")
+    if not auto.click(By.ID, "btn_bio_excp"):
+        log().error(f"지문인식 예외입찰 버튼을 찾을 수 없습니다.")
+        return False
+    
+    log().info("인증서 로그인(개인)")
+    _login_cert(auto, cert_pw, is_business_cert=False)
 
-    # 5. 견적서 제출 확인 - 견적서를 성공적으로 제출하였습니다.
+    log().info(" 견적서 제출 확인")
     if not auto.accept_alert():
-        log().error("견적서 제출 확인 - 견적서를 성공적으로 제출하였습니다.")
+        log().error("견적서 제출 확인 실패.")
+        return False
 
     return True
 
@@ -193,14 +205,22 @@ def _write_bid(auto: Automatic, cost):
     return True
 
 
-def _sumbit_bid(auto: Automatic):
+def _sumbit_bid(auto: Automatic, cert_pw):
     if not auto.click(By.ID, "btn_bid_submit"):
         log().error(f"Can not find 제출 버튼.")
         return False
-
+    
     if not auto.accept_alert():
         log().error(f"Failed to accept alert(1).")
         return False
+
+    #  지문인식 예외 - 예외입찰 버튼
+    if not auto.click(By.ID, "btn_bio_excp"):
+        log().error(f"지문인식 예외입찰 버튼을 찾을 수 없습니다.")
+        return False
+
+    log().info("인증서 로그인(개인)")
+    _login_cert(auto, cert_pw, is_business_cert=False)
 
     if not auto.accept_alert():
         log().error(f"Failed to accept alert(2).")
@@ -262,7 +282,7 @@ def _go_to_bid_write_page(auto: Automatic, number):
     return True
 
 
-def _participate_with_registration(auto: Automatic, number, cost):
+def _participate_with_registration(auto: Automatic, number, cost, cert_pw):
     # validate it's ready
     # WARNING: number format is different
     # ID: D2b - 입찰(참가신청) - 참가가능 검증
@@ -285,21 +305,28 @@ def _participate_with_registration(auto: Automatic, number, cost):
         return False
 
     # 입찰서 제출
-    if not _sumbit_bid(auto):
+    if not _sumbit_bid(auto, cert_pw):
         log().error(f"Failed to submit a bid. number={number}, cost={cost}")
         return False
+ 
 
     return True
 
 
-def _login_cert(auto: Automatic, user, cert_pw):
+def _login_cert(auto: Automatic, cert_pw, *, is_business_cert):
     # Certificate
     # 1. HDD선택
     auto.click(By.ID, "NX_MEDIA_HDD")
 
+
+
     # 2. 사업자 인증서 선택
-    auto.click(By.XPATH,
-               f'//*[@id="NXcertList"]/tr/td[2]/div[text()="{user}"]')
+    # auto.click(By.XPATH,
+    #            f'//*[@id="NXcertList"]/tr/td[2]/div[text()="{user}"]')
+    if is_business_cert:
+        auto.click(By.XPATH,'//td/div[contains(text(),"사업자")]/img/..')
+    else:
+        auto.click(By.XPATH,'//td/div[not(contains(text(),"사업자"))]/img/..')
 
     # XXX: 인증서 선택과정이 아래 type의 결과를 reset한다.
     #      따라서 충분한 간격을 준다.
@@ -311,10 +338,71 @@ def _login_cert(auto: Automatic, user, cert_pw):
     # 4. ok button
     auto.click(By.XPATH, '//*[@id="nx-cert-select"]/div[4]/button[1]')
 
+# def _login_cert(auto: Automatic, user, cert_pw):
+#     # Certificate
+#     # 1. HDD선택
+#     auto.click(By.ID, "NX_MEDIA_HDD")
+
+#     # 2. 사업자 인증서 선택
+#     auto.click(By.XPATH,
+#                f'//*[@id="NXcertList"]/tr/td[2]/div[text()="{user}"]')
+
+#     # XXX: 인증서 선택과정이 아래 type의 결과를 reset한다.
+#     #      따라서 충분한 간격을 준다.
+#     time.sleep(3)
+
+#     # 3. password
+#     auto.type(By.ID, "certPwd", cert_pw)
+
+#     # 4. ok button
+#     auto.click(By.XPATH, '//*[@id="nx-cert-select"]/div[4]/button[1]')
+
 
 # INTERFACE
+    
+def login(auto: Automatic, id, pw, certPw):
+    auto.go("https://www.d2b.go.kr/index.do")
 
-def login(auto: Automatic, token='BIO-SEAL') -> bool:
+    if _is_login(auto):
+        log().info("이미 로그인 되어 있습니다.")
+        return True
+
+    # login button
+    if not auto.click(By.ID, "_mLogin"):
+        log().info("login(). 로그인 버튼을 찾을 수 없습니다.")
+
+    # XXX: 너무 빨리 click이 되면 문제가 발생한다.
+    #       인증 프로그램 실행 준비가 안되었습니다. 설치가 안된 경우 제품을 설치 후 진행해 주시기 바랍니다
+    # TODO: 적절한 수준 찾기
+    # 3초: 가끔씩 메세지가 나오는 경우가 있다.
+    # 5초로 변경
+    log().info("Wait 5 secs. Too fast to login make problem.")
+    time.sleep(5)
+
+    if not auto.type(By.ID, '_id', id):
+        log().critical("login(). 로그인 아이디를 입력할 수 없습니다.")
+        return False
+    if not auto.type(By.ID, '_pw', pw):
+        log().critical("login(). 로그인 비밀번호를 입력할 수 없습니다.")
+        return False
+    
+    if not auto.click(By.ID, '_loginBtn'):
+        log().critical("login(). 로그인 버튼을 찾을 수 없습니다.")
+    
+    if not auto.type(By.ID, 'certPwd', certPw):
+        log().critical("login(). 인증서 비밀번호를 입력할 수 없습니다.")
+        return False
+    
+    if not auto.click(By.XPATH, '//*[@id="nx-cert-select"]/div[4]/button[1]'):
+        log().critical("login(). 인증서 선택 확인버튼을 찾을 수 없습니다.")
+        return False
+    
+    return True
+
+    
+
+
+def login_fingerprint(auto: Automatic, token='BIO-SEAL') -> bool:
     auto.go("https://www.d2b.go.kr/index.do")
 
     if _is_login(auto):
@@ -392,20 +480,26 @@ def login(auto: Automatic, token='BIO-SEAL') -> bool:
     return True
 
 
-def register_v2(auto: Automatic, number, user, cert_pw):
+def register_v2(auto: Automatic, number, cert_pw):
     # move to the page to register
     auto.go('https://www.d2b.go.kr/index.do')
 
     # type number and click search button
-    auto.type(By.ID, "numb_divs", number)
-    auto.click(By.ID, 'btn_search')
+    if not auto.type(By.ID, "numb_divs", number):
+        return False
+    if not auto.click(By.ID, 'btn_search'):
+        return False
 
-    # 검색된 결과 중 첫번째 element를 선택한다.
-    auto.click(
-        By.XPATH, '//*[@id="SBHE_DATAGRID_WHOLE_TBODY_datagrid1"]/tr[2]/td[8]/div/span/a')
+    # 검색된 결과 중 첫번째 element를 선택한다. 그런데 바로 클릭하게 되면 다음으로 넘어가지 않는다. 
+    time.sleep(1)
+    if not auto.click(By.XPATH, '//*[@id="datagrid1_1_7_data"]/span/a'):
+        log().critical("register(). 공고를 찾을 수 없습니다.")
+        return False
 
     # 입찰참가신청서 작성
-    auto.click(By.ID, 'btn_join')
+    if not auto.click(By.ID, 'btn_join'):
+        log().critical("register(). 입찰참가신청서 작성 버튼을 찾을 수 없습니다. ")
+        return False
 
     log().info("Check that popup exists.")
     # 신청서 작성후 popup이 생성 된다면.. 이미 신청이 된 상태이다.
@@ -415,14 +509,19 @@ def register_v2(auto: Automatic, number, user, cert_pw):
             return True
 
     log().info("서약서 작성")
-    auto.click(By.ID, 'c_box1')
-    auto.click(By.ID, 'c_box2')
+    auto.click(By.ID, 'c_box1',timeout=1)
+    auto.click(By.ID, 'c_box2',timeout=1)
+    auto.click(By.ID, 'c_box3', timeout=1) 
     auto.click(By.ID, 'subcont_dir_pay_yn1')
     auto.click(By.ID, 'btn_confirm')
 
     log().info("보증금납부 방법")
     sel = auto.get_element(By.ID, 'grnt_mthd')
-    auto.select(sel, '보증금면제')
+    if not sel:
+        log().critical("보증금 납부방법을 찾을 수 없습니다.")
+        return False
+    if not auto.select(sel, '보증금면제'):
+        return False
 
     # ID: D2b - reg - 보증금 동의문
     # 보증금납부에 대한 서약서 확인
@@ -440,8 +539,8 @@ def register_v2(auto: Automatic, number, user, cert_pw):
     auto.click(By.ID, 'btn_wrt')
     auto.accept_alert()
 
-    log().info("인증서 로그인")
-    _login_cert(auto, user, cert_pw)
+    log().info("인증서 로그인(사업자)")
+    _login_cert(auto, cert_pw, is_business_cert=True)
 
     # 팝업 확인
     auto.accept_alert()
@@ -455,7 +554,7 @@ def register_v2(auto: Automatic, number, user, cert_pw):
     return True
 
 
-def participate_v2(auto, number, cost):
+def participate_v2(auto, number, cost, cert_pw):
     def is_alpha(c):
         try:
             return c.encode('ascii').isalpha()
@@ -472,16 +571,17 @@ def participate_v2(auto, number, cost):
     number = number[:7]
 
     if not _need_registration(auto, number):
-        return _participate_without_registration(auto, number, cost)
+        return _participate_without_registration(auto, number, cost, cert_pw)
     else:
-        return _participate_with_registration(auto, number, cost)
+        return _participate_with_registration(auto, number, cost, cert_pw)
 
 
 class D2B:
     def __init__(self, id, pw, user, cert_pw, *, headless=True):
         log().debug("__init__")
 
-        self.__user = user
+        self.__id = id
+        self.__pw = pw
         self.__cert_pw = cert_pw
 
         self.auto = Automatic.create(Automatic.DriverType.Edge)
@@ -490,11 +590,11 @@ class D2B:
         self.auto.go("https://www.d2b.go.kr/index.do")
 
     def login(self):
-        return login(self.auto)
+        return login(self.auto, self.__id, self.__pw, self.__cert_pw)
         # d2b_login(self.driver, user, id, pw, cert_pw)
 
     def register(self, code):
-        return register_v2(self.auto, code, self.__user, self.__cert_pw)
+        return register_v2(self.auto, code, self.__cert_pw)
 
     def participate(self, code, price):
-        return participate_v2(self.auto, code, price)
+        return participate_v2(self.auto, code, price, self.__cert_pw)

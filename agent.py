@@ -10,7 +10,7 @@ from utils import edge
 from markets import create_market
 
 _market_filter = [
-    '국방전자조달',
+    # '국방전자조달',
     # '한국전력',
     # '나라장터(기타)',
 ]

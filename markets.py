@@ -205,8 +205,9 @@ class MarketFactory:
         elif market == MarketType.KEPCO:
             kepco_id = account_get("kepco", "id")
             kepco_pw = account_get("kepco", "pw")
+            kepco_cert = account_get("kepco", "cert")
             # login to support
-            return Kepco(kepco_id, kepco_pw)
+            return Kepco(kepco_id, kepco_pw, cert_pw=kepco_cert)
         elif market == MarketType.G2B:
             g2b_pw = account_get("g2b", "pw")
             return G2B(headless=False, pw=g2b_pw)

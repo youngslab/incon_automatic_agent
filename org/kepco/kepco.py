@@ -509,6 +509,28 @@ def kepco_certificate_fp_login(driver):
 
     return True
 
+def kepco_certificate_login(driver, password):
+    
+    with Frame(driver, (By.XPATH, '//iframe[contains(@title,"LOGIN")]')):
+
+        # 하드디스크
+        if not auto_click(driver, By.XPATH, '//*[@id="MediaSet_1"]/li[2]/button'):
+            return False
+
+        # 사업자 인증서 선택
+        if not auto_click(driver, By.XPATH, '//td/div[contains(text(),"사업자")]'):
+            return False
+
+        # 보안토큰 비밀번호 입력
+        if not auto_type(driver, By.ID, 'certPwd', password):
+            return False
+
+        # 확인버튼 (비밀번호 확인)
+        if not auto_click(driver, By.XPATH,
+                          '//*[@id="nx-cert-select"]/div[4]/button[1]'):
+            return False
+
+    return True
 
 def kepco_login(driver, id, pw, *, cert_pw=None):
 
@@ -522,7 +544,8 @@ def kepco_login(driver, id, pw, *, cert_pw=None):
         auto_click(driver, By.ID, 'certBtn')
 
     try:
-        kepco_certificate_fp_login(driver)
+        # kepco_certificate_fp_login(driver)
+        kepco_certificate_login(driver, cert_pw)
     except Exception as e:
         print(e)
         return False
