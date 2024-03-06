@@ -1,5 +1,5 @@
 
-import sys
+import sys, os
 import traceback
 import logging
 from logger import logger_init
@@ -8,6 +8,11 @@ from account import account_get
 from org.incon.incon_mro import InconMRO
 from utils import edge
 from markets import create_market
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_path)
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 _market_filter = [
     # '국방전자조달',

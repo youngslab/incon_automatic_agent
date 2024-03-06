@@ -4,33 +4,72 @@ import pyautogui
 import pyperclip
 import autoit
 
-from .utils import wait
-
 import time
+import os, sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+root_dir = os.path.dirname(parent_dir)
+sys.path.insert(0, root_dir)
+import auto_v2.common as common
+
+from .elements import Image, is_window,Control
 
 
-class Context:
-    def __init__(self, default_timeout=60, default_differed=0, default_confidence=.9, default_grayscale=True):
-        self.default_timeout = default_timeout
-        self.default_differed = default_differed
+class Context(common.Context):
+    def __init__(self,* ,timeout=60, differ=0, default_confidence=.9, default_grayscale=True):
+        self.__timeout = timeout 
         self.default_confidence = default_confidence
         self.default_grayscale = default_grayscale
+
+
+    def activate(self, desc:common.Descriptor):
+        if not desc:
+            return False
+
+        elem = self.get(desc)
+
+        if is_window(desc):
+            return self.__activate_window(elem, desc.timeout())
+        else:
+            # NotSupportedOperation
+            return True
+
+    def get(self, desc:common.Descriptor):
+        timeout = desc.timeout()
+        timeout = timeout if timeout else self.__timeout
+
+        if isinstance(desc, Image):
+            return self.get_position(desc.path(), timeout, desc.confidence(), desc.grayscale())
+
+        if isinstance(desc, Control):
+            return { "window": desc.parent.path(), "control": desc.path() }
+
+        return None
+
+
+    def click2(self, elem):
+
+        if isinstance(elem, Position):
+            pyautogui.click(elem)
+
+
+    def 
 
     def get_position(self, img, timeout, confidence, grayscale):
         """
         Get a center position of the image
         """
-        return wait(lambda: pyautogui.locateCenterOnScreen(
+        return common.wait(lambda: pyautogui.locateCenterOnScreen(
             self.img, grayscale=grayscale, confidence=confidence), timeout=timeout)
 
     def wait_no_image(self, img, timeout, confidence, grayscale) -> bool:
         """
         Wait until the image disappears
         """
-        return wait(lambda: pyautogui.locateCenterOnScreen(
+        return common.wait(lambda: pyautogui.locateCenterOnScreen(
             self.img, grayscale=grayscale, confidence=confidence) is None, timeout=timeout)
 
-    def activate(self, window, timeout):
+    def __activate_window(self, window, timeout):
         """
         Using Autoit APIs, wait until a window activated.
         """
@@ -158,3 +197,4 @@ class ImageElement:
             print(f"ERROR: Failed to type an element. img={self.image}")
             return False
         return True
+

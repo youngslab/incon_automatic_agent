@@ -181,8 +181,6 @@ def register(auto: Automatic, pns):
 def login(auto: Automatic, password):
     go_homepage(auto)
 
-    
-
     member_frame = auto.get_element(By.ID, 'member_iframe')
     if not member_frame:
         log().error("Failed to find member frame")
