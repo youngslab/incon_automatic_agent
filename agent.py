@@ -1,11 +1,13 @@
 
-import sys, os
+import sys
+import os
 import traceback
 import logging
 from logger import logger_init
 
 from account import account_get
 from org.incon.incon_mro import InconMRO
+from org.incon_v2.incon_v2 import InconMRO_v2
 from utils import edge
 from markets import create_market
 
@@ -26,7 +28,7 @@ def create_data_provider():
     driver = edge.create_driver()
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
-    return InconMRO(driver, id, pw)
+    return InconMRO_v2(driver, id, pw)
 
 
 def log():
@@ -78,7 +80,7 @@ def main():
         # markets(asynchronously)
         markets = [bid.market for bid in bids] + \
             [pre.market for pre in pres]
-        markets = set(markets)  
+        markets = set(markets)
         print("markets")
         print(markets)
 
