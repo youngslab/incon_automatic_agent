@@ -1,546 +1,240 @@
 
-from selenium.webdriver.edge.webdriver import WebDriver
 import random
+
+import automatic as am
+import automatic.selenium as s
 import logging
+import pandas as pd
+import numpy as np
 
-import auto.selenium
-from org.g2b.res import resmgr
-from selenium.webdriver.common.by import By
+from utils.logger import Logger
 
-# ---------------------
-# Utilities
-# ---------------------
 
-
-def to_code(market_title: str):
-    if market_title == "국방전자조달":
-        return "d2b"
-    elif market_title == "나라장터":
-        return "g2b"
-    elif market_title == "한국전력":
-        return "kepco"
-    elif market_title == "가스공사":
-        return "kogas"
-    else:
-        return "unknown"
-
-# ---------------------
-# Incon Login Page
-# ---------------------
-
-
-def log():
-    return logging.getLogger("incon")
-
-# Incon Homepage
-
-
-def incon_go_homepage(driver):
-    auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/login.jsp')
-
-# Condition
-# - Should be at the homepage
-# - Mobile page: mepno, meppw
-
-
-def incon_login(driver, id, pw):
-    id_input = (By.ID, 'mepno')
-    pw_input = (By.ID, 'meppw')
-    success = auto.selenium.send_keys(driver, id_input, id) \
-        | auto.selenium.send_keys(driver, pw_input, pw)
-    if not success:
-        return False
-
-    submit_btn = (By.ID, 'submit')
-    success = auto.selenium.click(driver, submit_btn)
-    if not success:
-        return False
-
-    # wait until its url changes
-    dest = 'https://chodal.in-con.biz/bidmobile/msg/list.do'
-    return auto.selenium.wait_until_webpage(driver, dest)
-
-
-# ---------------------
-# List Item
-# ---------------------
-
-def incon_listitem_get_button(listitem):
-    return listitem.find_element(By.XPATH, './/a[2]')
-
-
-def incon_listitem_is_completed(listitem):
-    completion_button = incon_listitem_get_button(listitem)
-    return 'ui-icon-check' in completion_button.get_attribute("class")
-
-
-def incon_listitem_complete(driver, listitem):
-    completion_button = incon_listitem_get_button(listitem)
-    return auto.selenium.click_element(driver, completion_button)
-
-
-def incon_listitem_click(driver, listitem):
-    body = listitem.find_element(By.XPATH, './/a[1]')
-    return auto.selenium.click_element(driver, body)
-
-
-# ---------------------
-# Preregistration
-# ---------------------
-
-# 실제 이동을 하였으면 True, 아니면 False를 반환한다.
-def incon_pre_go_page(driver: WebDriver):
-    if driver.current_url == 'http://chodal.in-con.biz/bidmobile/msg/list.do':
-        return False
-    auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/msg/list.do')
-
-    return True
-
-
-def incon_pre_close_popup(driver: WebDriver):
-    # 2022125 popup이 변경 되었음. - 안전입찰2.0 에 관련된 내용.
-    # OK button 을 눌러준다.
-    try:
-        button = driver.find_element(By.XPATH, "//button[text()='OK']")
-    except:
-        button = None
-    if button:
-        button.click()
-    else:
-        log().error("팝업이 더이상 열리지 않습니다. 팝업확인 필요합니다.")
-
-
-def incon_pre_get_listitems(webdriver):
-
-    if incon_pre_go_page(webdriver):
-        log().info("moved to the preregistration list page")
-
-        log().info("close popup")
-        incon_pre_close_popup(webdriver)
-
-        log().info("activate all items")
-        incon_pre_listitem_activate_all(webdriver)
-
-    return webdriver.find_elements(By.XPATH, '//*[@id="demo-page"]/div[2]/ul/li')
-
-
-def incon_pre_get_listitem_by_title(driver: WebDriver, title: str):
-    # get all items in a page
-    items = incon_pre_get_listitems(driver)
-    for item in items:
-        if item.text.find(title) < 0:
-            continue
-        return item
-    # failed to find an element
-    return None
-
-
-def incon_pre_listitem_activate_all(webdriver):
-    xs = webdriver.find_elements(
-        By.XPATH, f'//*[@id="demo-page"]/div[2]/ul/li/a[1]/p')
-    for x in xs:
-        # get id
-        id = x.get_attribute("id")
-        if not id:
-            continue
-        if id.find("hide") < 0:
-            continue
-        log().debug("activate) found <p id=\"hidexxxx\"> element.")
-        style = x.get_attribute("style")
-        if style.find("display") >= 0:  # display:none
-            log().debug("activate) skip <p id=\"hidexxxx\"> element. It's hidden")
-            continue
-
-        # 이걸 click해도 되나?
-        # 이전까지는 .//a[1]을 현재는 .//a[1]/p를 click 하는 것이다.
-        log().debug("activate) activate pre item.")
-        auto.selenium.click_element(webdriver, x)
-
-
-def incon_pre_listitem_get_data(webelement):
-    res = dict()
-    tokens = webelement.text.split('\n')
-    for token in tokens:
-        sep = token.find(":")
-        if sep < 0 or token.find("**") >= 0:
-            res['etc'] = f"{res.get('etc','')} \n{token}"
-        else:
-            res[token[:sep].strip()] = token[sep+1:].strip()
-    return res
-
-
-class Preregistration:
-    def __init__(self, driver, pre_listitem):
-        self.__driver = driver
-        self.__data = incon_pre_listitem_get_data(pre_listitem)
-        self.market = self.__data['조달사이트']
-        self.number = self.__get_number()
-        self.title = self.__get_title()
-        self.deadline = self.__get_deadline()
-
-    def __get_number(self):
-        if self.__data.get("세부품명번호"):
-            return self.__data.get("세부품명번호")
-        elif self.__data.get("공고번호"):
-            return self.__data.get("공고번호")
-        raise Exception(f"Not found Notice Numboer: {self.__data}")
-
-    def __get_title(self):
-        if self.__data.get("세부품명"):
-            return self.__data.get("세부품명")
-        elif self.__data.get("공고명"):
-            return self.__data.get("공고명")
-        raise Exception(f"Not found title: {self.__data}")
-
-    def __get_deadline(self):
-        if self.__data.get('입찰신청마감일시'):
-            return self.__data.get('입찰신청마감일시')
-        elif self.__data.get('등록마감일시'):
-            return self.__data.get('등록마감일시')
-        raise Exception(f"Not found deadline: {self.__data}")
-
-    def is_completed(self):
-        element = incon_pre_get_listitem_by_title(
-            self.__driver, self.__get_title())
-        if not element:
-            # Should not reach here
-            raise Exception("Failed to find an element")
-
-        return incon_listitem_is_completed(element)
-
-    def complete(self):
-        element = incon_pre_get_listitem_by_title(
-            self.__driver, self.__get_title())
-        if not element:
-            # Should not reach here
-            raise Exception("Failed to find an element")
-
-        return incon_listitem_complete(self.__driver, element)
-
-    def __str__(self):
-        return f"market={to_code(self.market):7s}, code={self.number:20s}, title={self.title}"
-
-
-# ---------------------
-# Biding
-# ---------------------
-
-# 이동이 일어 났다면 True, 아니면 False를 반환한다.
-def incon_bid_go_page(driver: WebDriver):
-    if driver.current_url == 'http://chodal.in-con.biz/bidmobile/bid/list.do':
-        return False
-    auto.selenium.go(driver, 'http://chodal.in-con.biz/bidmobile/bid/list.do')
-    return True
-
-
-def incon_bid_listitem_is_activated(listitem):
-    # items = listitem.find_elements(By.XPATH, \
-    #     './/a[1]/h2[contains(@id, "first") and not(contains(@style,"display"))]')
-    # if len(items) == 0:
-    #     return True
-    # else:
-    # return False
-    try:
-        elem = listitem.find_element(By.CSS_SELECTOR, 'h2[id^="first"]')
-        style = elem.get_attribute("style")
-        if style.find("display") >= 0:
-            return True
-    except Exception:
-        return True
-
-    return False
-
-
-def incon_bid_get_listitem(webdriver, idx):
-    xs = webdriver.find_elements(
-        By.XPATH, f'//*[@id="bid_list"]/li[{idx + 1}]')
-    return xs[0] if len(xs) == 1 else None
-
-
-def incon_bid_get_listitems(webdriver):
-    if incon_bid_go_page(webdriver):
-        log().info("moved to the bid list page")
-
-        # cleanup
-        log().info("activate all bid items")
-        incon_bid_activate_all(webdriver)
-
-        items = webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
-        if not items:
-            raise Exception(
-                f"Need to check current pages. {webdriver.current_url}")
-
-        # pricing all items
-        log().info(f"price all items({len(items)}).")
-        incon_bid_price_all(webdriver, items)
-
-    # 이전에 얻었던 element는 더 이상 유효하지 않다.
-    #  - pricing은 다른 페이지의 이동을 포함한다.
-    return webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
-
-
-def incon_bid_get_listitem_by_title(driver: WebDriver, title: str):
-    items = incon_bid_get_listitems(driver)
-    for item in items:
-        if item.text.find(title) < 0:
-            continue
-        return item
-    # failed to find an element.
-    return None
-
-
-def incon_bid_activate_all(webdriver):
-    xs = webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li/a[1]/h2')
-    for x in xs:
-        # get id
-        id = x.get_attribute("id")
-        if not id:
-            continue
-        if id.find("first") < 0:
-            continue
-        log().debug("activate) found <h2 id=\"firstxxxx\"> element.")
-        style = x.get_attribute("style")
-        if style.find("display") >= 0:  # display:none
-            log().debug("activate) skip <h2 id=\"firstxxxx\"> element. It's hidden")
-            continue
-        log().debug("activate) activate bid item.")
-        auto.selenium.click_element(webdriver, x)
-
-
-def incon_bid_listitem_get_data(listitem):
-    res = dict()
-    tokens = listitem.text.split('\n')
-    for token in tokens:
-        sep = token.find(":")
-        if sep < 0 or token.find("**") >= 0:
-            res['etc'] = f"{res.get('etc','')} \n{token}"
-        else:
-            res[token[:sep].strip()] = token[sep+1:].strip()
-    return res
-
-
-def incon_bid_listitem_get_market(listitem):
-    market_img = listitem.find_element(By.XPATH, './/a[1]/img[1]')
-    img_src = market_img.get_attribute("src")
-    if img_src.find("bid_title_icon1.png") >= 0:
-        return "나라장터"
-    elif img_src.find("bid_title_icon2.png") >= 0:
-        return "국방전자조달"
-    elif img_src.find("bid_title_icon3.png") >= 0:
-        return "LH"
-    elif img_src.find("bid_title_icon4.png") >= 0:
-        return "도로공사"
-    elif img_src.find("bid_title_icon5.png") >= 0:
-        return "한국전력"
-    elif img_src.find("bid_title_icon6.png") >= 0:
-        return "수자원공사"
-    elif img_src.find("bid_title_icon7.png") >= 0:
-        return "마사회"
-    # icon 8 in not presents
-    elif img_src.find("bid_title_icon9.png") >= 0:
-        return "학교장터"
-    elif img_src.find("bid_title_icon10.png") >= 0:
-        return "인천공항"
-    elif img_src.find("bid_title_icon11.png") >= 0:
-        return "한수원"
-    elif img_src.find("bid_title_icon12.png") >= 0:
-        return "가스공사"
-    elif img_src.find("bid_title_icon13.png") >= 0:
-        return "철도공사"
-    elif img_src.find("bid_title_icon14.png") >= 0:
-        return "석유공사"
-    else:
-        raise Exception(f"Unkown market of {img_src}")
-
-
-def incon_bid_listitem_is_ready(listitem) -> bool:
-    status_img = listitem.find_element(By.XPATH, './/a[1]/img[2]')
-    status_src = status_img.get_attribute('src')
-    return status_src.find("ing.png") >= 0
-
-
-def incon_bid_listitem_get_price(listitem) -> int:
-    price = listitem.find_element(By.XPATH, './/a[1]/div/font')
-    numbers = "".join(
-        char for char in price.text if char.isdigit() or char == '.')
-    if numbers:
-        # sometime its value is float
-        return int(float(numbers))
-    else:
-        return 0
-
-
-def incon_bid_listitem_has_price(listitem) -> bool:
-    if incon_bid_listitem_get_price(listitem) > 0:
-        return True
-    else:
-        return False
-
-
-def incon_bid_listitem_price(webdriver, listitem) -> bool:
-    # page moved.
-    success = incon_listitem_click(webdriver, listitem)
-    if not success:
-        log().warning("failed to click bid listitem.")
-        return False
-
-    # detail page
-    price_button = auto.selenium.find_element_until(
-        webdriver, (By.XPATH, '//*[@id="detail-page"]/div[2]/div/div[7]/a[1]'))
-    success = auto.selenium.click_element(webdriver, price_button)
-    if not success:
-        log().warning("failed to click price_button.")
-        return False
-
-    # Input page
-    # input percentage
-    input = auto.selenium.find_element_until(
-        webdriver, (By.XPATH, '//*[@id="point"]'))
-    min = webdriver.find_element(By.XPATH, '//*[@id="sRange"]')
-    min = float(min.text)
-    max = webdriver.find_element(By.XPATH, '//*[@id="eRange"]')
-    max = float(max.text)
-
-    # 4 decimal places
-    target = round(random.uniform(min, max), 4)
-
-    log().info(
-        f"randomly select price rate. rate={target}, min={min}, max={max}")
-    # BE CAREFUL: Target should be in the range from min to max.
-    if target < min or target > max:
-        raise Exception(
-            f"Price Rate is out of bound. rate={target}, min={min}, max={max}")
-
-    success = auto.selenium.send_keys_element(webdriver, input, f"{target}")
-    if not success:
-        log().warning("failed to type price.")
-        return False
-
-    save_button = webdriver.find_element(
-        By.XPATH, '//*[@id="detail-page"]/div[2]/a')
-    success = auto.selenium.click_element(webdriver, save_button)
-    if not success:
-        log().warning("failed to click save_button.")
-        return False
-
-    return True
-
-
-def incon_bid_price_all(webdriver, items):
-    counts = len(items)
-    for idx in range(counts):
-        priced = False
-        retry = 0
-        while retry < 2:
-            item = incon_bid_get_listitem(webdriver, idx)
-            if not item:
-                log().error(
-                    f"pricing) failed to get item. idx={idx}")
-                break
-            if incon_bid_listitem_has_price(item):
-                log().debug(
-                    f"pricing) The bid was priced. idx={idx}, retry={retry}")
-                priced = True
-                break
-            if not incon_bid_listitem_is_ready(item):
-                log().debug(f"pricing) The bid is not ready. Skip. idx={idx}")
-                break
-            retry = retry + 1
-            temp = Bid(webdriver, item)
-            log().debug(
-                f"pricing) price the bid item. idx={idx}, retry={retry}, nubmer={temp.number}, title={temp.title}")
-            incon_bid_listitem_price(webdriver, item)
-
-        if not priced:
-            log().error(
-                f"pricing) failed to price a bid. idx={idx}, retry={retry}")
-
-    # Validate that number of item has been changed.
-    items = webdriver.find_elements(By.XPATH, '//*[@id="bid_list"]/li')
-    curr = len(items)
-    if counts != curr:
-        raise Exception(
-            f"Number of Items has been changed. prev={counts}, curr={curr}")
+class Callbacks():
+    def __init__(self, complete):
+        self.complete = complete
 
 
 class Bid:
-    def __init__(self, webdriver, listitem):
-        self.__driver = webdriver
-        self.__listitem = listitem
-        self.__data = incon_bid_listitem_get_data(self.__listitem)
-        self.title = self.__data['공고명']
-        self.number = self.__data['공고번호']
-        self.deadline = self.__data['입찰마감']
-        self.market = incon_bid_listitem_get_market(self.__listitem)
-        self.is_ready = incon_bid_listitem_is_ready(self.__listitem)
-        self.price = incon_bid_listitem_get_price(self.__listitem)
-
-    def __str__(self):
-        return f"market={to_code(self.market):7s}, code={self.number:20s}, price={int(self.price):12,} KRW, title={self.title}"
-
-    def is_completed(self):
-        # find element in the list...
-        element = incon_bid_get_listitem_by_title(self.__driver, self.title)
-        if not element:
-            raise Exception("Failed to find an element.")
-        return incon_listitem_is_completed(element)
+    def __init__(self, data, callbacks):
+        self.market = data['조달사이트']
+        self.number = data['공고번호']
+        self.title = data['공고명']
+        self.price = data['산정금액']
+        self.callbacks = callbacks
 
     def complete(self):
-        # find element in the list...
-        element = incon_bid_get_listitem_by_title(self.__driver, self.title)
-        if not element:
-            raise Exception("Failed to find an element.")
-        return incon_listitem_complete(self.__driver, element)
+        self.callbacks.complete(self.number)
+
+    def is_completed(self):
+        return False
+
+    def __str__(self):
+        return f"market={self.market:7s}, code={self.number:20s}, price={int(float(self.price)):12,} KRW, title={self.title}"
 
 
-class Incon:
-    def __init__(self, id, pw, headless=True):
-        self.driver = None
-        self.driver = auto.selenium.create_edge_driver(headless=headless)
-        incon_go_homepage(self.driver)
-        incon_login(self.driver, id, pw)
+class Preregistration:
+    def __init__(self, data, callbacks):
+        self.callbacks = callbacks
+        self.__data = data
+        self.number = self.__data['공고번호'] if self.__data['공고번호'] else self.__data['세부품명번호']
+        self.title = self.__data['공고명'] if self.__data['공고명'] else self.__data['세부품명']
+        self.market = self.__data['조달사이트']
+        self.__page = self.__data['페이지']
 
-    def __del__(self):
-        if self.driver:
-            self.driver.close()
+    def complete(self):
+        self.callbacks.complete(self.number, self.__page)
+
+    def is_completed(self):
+        return False
+
+    def __str__(self):
+        return f"market={self.market:7s}, code={self.number:20s}, title={self.title}"
+
+
+# New Incon MRO mall
+class InconMRO(am.Automatic, Logger):
+    def __init__(self, driver, id, pw, loglevel=logging.DEBUG):
+        self.id = id
+        self.pw = pw
+        selenium = s.Context(driver, timeout=10, differ=0)
+        am.Automatic.__init__(self, [selenium])
+
+        Logger.__init__(self, loglevel=loglevel)
+
+    def login(self):
+        self.logger.info("로그인")
+        try:
+            self.go(s.Url("홈페이지", "https://www.incon-mro.com/bbs/login.php?url=%2F"))
+            self.type(s.Id("아이디 입력 상자", "login_id"), self.id)
+            self.type(s.Id("암호 입력 상자", "login_pw"), self.pw)
+            self.click(s.Xpath("확인 버튼",  "//button[text()='로그인']"))
+
+        except Exception as e:
+            self.logger.error(e)
+            return False
+
+    def init_pre(self):
+        self.logger.info("전체 소싱 요청")
+        try:
+            self.go(
+                s.Url("소싱요청 페이지", "https://www.incon-mro.com/shop/sourcingrequestlist.php"))
+            self.click(s.Xpath("소싱 요청 버튼", "//button[text()='전체소싱요청']"))
+            self.accept(s.Alert("소싱 요청 확인 팝업", "전체를 소싱요청하시겠습니까?"))
+            popup = s.Alert("소싱 완료 팝업", "전체소싱요청 하실 항목이 존재하지 않습니다.", timeout=5)
+            if self.exist(popup):
+                self.accept(popup)
+
+            # 화면이 잘 로딩될때 까지 기다린다.
+            return self.exist(s.Xpath("사전등록", "//a[text()='사전등록']"))
+
+        except Exception as e:
+            self.logger.error(e)
+            return False
+
+    def clean_pre_list(self, df: pd.DataFrame) -> pd.DataFrame:
+        self.logger.info("사전등록 데이터 클렌징")
+        # 1. 직접의무대상 제거
+        df = df[~df.iloc[:, 2].str.contains('직접이행의무대상')]
+        # 2. 취소 제거
+        df = df[~df.iloc[:, 2].str.contains('취소')]
+        # 3. 사전등록완료 제거
+        df = df[~df.iloc[:, 2].str.contains('사전등록완료')]
+        # 4. 의미 없는 단어 제거
+        df.iloc[:, 2] = df.iloc[:, 2].str.replace('Copy to clipboard', '')
+
+        df['공고번호'] = df.iloc[:, 2].str.extract(
+            r'공고번호 : (.+?)(?: 공고명)')  # 공고번호 추출
+        df['공고명'] = df.iloc[:, 2].str.extract(
+            r'공고명 : (.+?)(?: 판단번호|$)')  # 공고명 추출
+        df['판단번호'] = df.iloc[:, 2].str.extract(r'판단번호 : (\d+)')  # 판단번호 추출
+        df['세부품명'] = df.iloc[:, 2].str.extract(
+            r'세부품명 : (.+?)(?: 세부품명번호)')  # 공고번호 추출
+        df['세부품명번호'] = df.iloc[:, 2].str.extract(
+            r'세부품명번호 : (.+?)')  # 공고명 추출
+        return df
+
+    def clean_bid_list(self, df: pd.DataFrame) -> pd.DataFrame:
+        self.logger.info("입찰 데이터 클렌징")
+        # Merge notice
+        df['비고'] = df['견적서'].shift(-1)
+        df = df[df['견적서'].isnull()].copy()
+
+        df = df[~df['구분'].isin(['개시전', '취소'])]
+        # df = df[~df['공고번호 / 공고명'].str.contains("채택완료")]
+
+        df['조달사이트'] = df['조달사이트'].str.replace('황금입찰', '')
+
+        # Drop unused columns
+        columns_to_drop = [col for col in df.columns if 'Unname' in col]
+        df.drop(columns_to_drop, axis=1, inplace=True)
+
+        df['공고번호 / 공고명'] = df['공고번호 / 공고명'].str.replace('채택완료', '')
+        df['공고번호 / 공고명'] = df['공고번호 / 공고명'].str.replace('사전등록완료', '')
+
+        # Extract data
+        df['공고번호'] = df.iloc[:, 3].str.split('Copy to clipboard').str[0]
+        df['공고명'] = df.iloc[:, 3].str.extract(
+            r'Copy to clipboard(.+?)(?:판단번호|$)')  # 공고명 추출
+        df['판단번호'] = df.iloc[:, 3].str.extract(
+            r'판단번호 : (\d+)Copy to clipboard')  # 판단번호 추출
+
+        return df
+
+    def get_num_of_predata_page(self):
+        self.go(
+            s.Url("사전등록 탭", "https://www.incon-mro.com/shop/preregistrationlist.php"))
+        # a tag의 개수를 세어 몇개의 페이지가 존재하는지 확인한다.
+        # 묶음 이동 버튼(>>) 이 포함되어 있으나, 현재 활성화 되어 있는 페이지의 경우 a tag를 갖고 있지
+        # 않기 때문에 a tag의 갯수가 페이지의 갯수가 된다.
+        return self.count(s.Xpath("페이지 버튼", '//*[@id="preregistrationlist"]/div/nav/span/a'))
 
     def get_pre_data(self):
-        items = incon_pre_get_listitems(self.driver)
-        return [Preregistration(self.driver, item) for item in items]
+        self.logger.info("사전 등록 데이터 요청")
+        try:
+            dfs = []
+            cnt = self.get_num_of_predata_page()
+            for i in range(1, cnt+1):
+                self.logger.info(f"사전등록데이터 요청 - {i} page")
+                self.go(
+                    s.Url("사전등록 탭", f"https://www.incon-mro.com/shop/preregistrationlist.php?&page={i}"))
+                df = self.table(
+                    s.Xpath("사전등록 리스트", '//*[@id="preregistrationlist"]/div/table'))
+                df = self.clean_pre_list(df)
+                df["페이지"] = i
+                dfs.append(df)
+
+            df = pd.concat(dfs, ignore_index=True)
+            return [Preregistration(d, lambda num, p: self.complete_pre(num, p)) for _, d in df.iterrows()]
+
+        except Exception as e:
+            self.logger.error(e)
+            return None
+
+    def bid_init(self):
+        self.logger.info("입찰 데이터 가격 산정")
+        df = self.__bid_data()
+        for num in df.loc[df['산정금액'].isna(), '공고번호']:
+            self.calculate_price(num)
+
+    def __bid_data(self):
+        self.logger.info("입찰 데이터 요청")
+        self.go(
+            s.Url("소싱완료탭", "https://www.incon-mro.com/shop/sourcingcompletelist.php"))
+
+        df = self.table(
+            s.Xpath("소싱완료 리스트", '//*[@id="sourcingcomplete"]/div/table'))
+
+        return self.clean_bid_list(df)
 
     def get_bid_data(self):
-        items = incon_bid_get_listitems(self.driver)
-        return [Bid(self.driver, item) for item in items]
+        return [Bid(d, lambda num, p: self.complete_pre(num)) for _, d in self.__bid_data().iterrows()]
 
+    def calculate_price(self, num):
+        self.logger.info(f"가격산정 {num}")
+        # 견적서로 이동
+        self.click(s.Xpath(
+            "견적서보기 버튼",  f'//*[contains(text(),"{num}")]/../../../td/a[@title="견적서 보기"]'))
 
-def test_execution_time():
-    from account import account_get
-    id = account_get("incon", "id")
-    pw = account_get("incon", "pw")
+        if self.exist(s.Xpath("채택 버튼", "//button[text()='채택 후 가격산정하기']", timeout=3)):
+            self.click(s.Xpath("채택 버튼", "//button[text()='채택 후 가격산정하기']"))
+            self.accept(s.Alert("가격산정 확인 팝업", "채택 후 가격산정 하시겠습니까?"))
 
-    ic = Incon(id, pw)
+        self.click(s.Xpath("가격산정 버튼",  "//a[text()='가격을 산정 하겠습니다.']"))
 
-    import time
-    start = time.time()
-    pres = ic.get_pre_data()
-    end = time.time()
-    print(f"getting pre items takes {end - start}")
-    for pre in pres:
-        print(pre)
+        # 사정율 범위
+        range_text = self.text(
+            s.Xpath("사정율 범위", '//th[text()="사정율 범위"]/../td'))
+        random_range = range_text.replace("%", "").split("~")
+        min = float(random_range[0])
+        max = float(random_range[1])
+        ratio = round(random.uniform(min, max), 4)
 
-    start = time.time()
-    bids = ic.get_bid_data()
-    end = time.time()
-    print(f"getting pre items takes {end - start}")
-    for bid in bids:
-        print(bid)
+        self.type(s.Id("범위 입력 상자", "assessment_rate"), ratio)
+        self.click(
+            s.Xpath("가격 저장", "//button[text()='가격 저장' and @class='btn_bid_amount']"))
+        self.accept(s.Alert("저장 확인 팝업", "가격산정을 저장하시겠습니까?"))
+        self.accept(s.Alert("저장 완료 팝업", "해당하는 가격을 저장했습니다."))
 
+    def complete_pre(self, num, page):
+        # pre condition: should be in the pre-registration page
+        self.go(s.Url(
+            "사전등록 탭", f"https://www.incon-mro.com/shop/preregistrationlist.php?&page={page}"))
 
-# ---------------------
-# Test
-# ---------------------
-if __name__ == "__main__":
-    import logger
-    logger.logger_init()
+        # NOTE:
+        # text() -> .
+        # 열이 다른 항목은 text()[1] 혹은 text()[2] 와 같이 접근해야 한다.
+        # ex) <td> xxx <br> yyy </td>
+        self.click(s.Xpath("체크버튼", f"//td[contains(.,'{num}')]/../td/label"))
+        self.click(s.Xpath("사전등록완료 버튼", f"//button[text()='사전등록완료']"))
+        self.accept(s.Alert("사전등록 확인 버튼", "선택한 입찰공고를 사전등록하셨습니까?"))
 
-    test_execution_time()
+    def bid_complete(self, num):
+        self.go(
+            s.Url("소싱완료탭", "https://www.incon-mro.com/shop/sourcingcompletelist.php"))
+
+        self.click(
+            s.Xpath("체크버튼", f"//a[contains(.,'{num}')]/../../../td/label"))
+        self.click(s.Xpath("입찰참여 완료 버튼", f"//button[text()='입찰참여완료']"))
+        self.accept(s.Alert("입찰참여 완료 확인 팝업", "입찰참여완료 하시겠습니까?"))
+        self.accept(s.Alert("입찰참여 완료 안내 팝업", "아래와 같이 입찰참여완료가 진행됩니다."))

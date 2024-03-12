@@ -6,15 +6,22 @@ import logging
 from logger import logger_init
 
 from account import account_get
-from org.incon.incon_mro import InconMRO
-from org.incon_v2.incon_v2 import InconMRO_v2
-from utils import edge
-from markets import create_market
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_path)
-if project_root not in sys.path:
-    sys.path.append(project_root)
+from utils import edge
+
+
+# fmt: off
+module_directory = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 
+    "thirdparty", "automatic")
+if module_directory not in sys.path:
+    sys.path.append(module_directory)
+print(module_directory)
+
+from markets import create_market
+from org.incon import InconMRO
+
+# fmt: on)
 
 _market_filter = [
     # '국방전자조달',
@@ -28,7 +35,7 @@ def create_data_provider():
     driver = edge.create_driver()
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
-    return InconMRO_v2(driver, id, pw)
+    return InconMRO(driver, id, pw)
 
 
 def log():
