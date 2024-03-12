@@ -1,8 +1,25 @@
+import logging
 import os
 import json
 import datetime
 import logging
 import logging.config
+
+
+class Logger:
+    def __init__(self, name, *, loglevel=logging.INFO):
+        self.name = name
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(loglevel)
+        self.logger.handlers.clear()
+
+        ch = logging.StreamHandler()
+        ch.setLevel(loglevel)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
+
 
 
 def logger_update_handler_filename_if_neccessary(config: dict, handler_name: str, filename: str) -> bool:

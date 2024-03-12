@@ -12,14 +12,14 @@ from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from multiprocessing import Process, Pipe
 from typing import List
 from enum import Enum
-from org.d2b import D2B
-from org.kepco import Kepco
+# from org.d2b import D2B
+# from org.kepco import Kepco
 from org.g2b.g2b import G2B
-from org.kogas.kogas import Kogas
+# from org.kogas.kogas import Kogas
 
 from account import account_get, account_get_raw_data
 import logging
-from logger import logger_init
+# from logger import logger_init
 
 from utils import edge
 
@@ -130,7 +130,7 @@ class MarketType(Enum):
 class Proxy:
     def start_server(conn, market):
         # 다른 프로세스의 entry point이기 때문에 별도의 logger init이 필요하다.
-        logger_init()
+        # logger_init()
         log().info(f"Start a server. market={market.value}]")
         market = MarketFactory.create(market)
         server = Server(market, conn)
@@ -196,32 +196,38 @@ class Proxy:
 
 class MarketFactory:
     def create(market):
-        if market == MarketType.D2B:
-            d2b_id = account_get("d2b", "id")
-            d2b_pw = account_get("d2b", "pw")
-            d2b_user = account_get("d2b", "user")
-            d2b_cert = account_get("d2b", "cert")
-            return D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
-        elif market == MarketType.KEPCO:
-            kepco_id = account_get("kepco", "id")
-            kepco_pw = account_get("kepco", "pw")
-            kepco_cert = account_get("kepco", "cert")
-            # login to support
-            return Kepco(kepco_id, kepco_pw, cert_pw=kepco_cert)
-        elif market == MarketType.G2B:
+        if market == MarketType.G2B:
+            driver = edge.create_driver()
             g2b_pw = account_get("g2b", "pw")
-            return G2B(headless=False, pw=g2b_pw)
-        elif market == MarketType.KOGAS:
-            try:
-                driver = edge.create_driver()
-                filepath = os.path.join(
-                    os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
-                kogas_name = account_get("kogas", "manager_name")
-                kogas_phone = account_get("kogas", "manager_phone")
-                kogas_email = account_get("kogas", "manager_email")
-                return Kogas(driver=driver, manager_name=kogas_name, manager_phone=kogas_phone, manager_email=kogas_email, small_business=filepath)
-            except:
-                return None
+            g2b_id = account_get("g2b", "id")
+            return G2B(driver, g2b_pw, g2b_id, logging.INFO)
+
+        # if market == MarketType.D2B:
+        #     d2b_id = account_get("d2b", "id")
+        #     d2b_pw = account_get("d2b", "pw")
+        #     d2b_user = account_get("d2b", "user")
+        #     d2b_cert = account_get("d2b", "cert")
+        #     return D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
+        # elif market == MarketType.KEPCO:
+        #     kepco_id = account_get("kepco", "id")
+        #     kepco_pw = account_get("kepco", "pw")
+        #     kepco_cert = account_get("kepco", "cert")
+        #     # login to support
+        #     return Kepco(kepco_id, kepco_pw, cert_pw=kepco_cert)
+        # if market == MarketType.G2B:
+        #     g2b_pw = account_get("g2b", "pw")
+        #     return G2B(headless=False, pw=g2b_pw)
+        # elif market == MarketType.KOGAS:
+        #     try:
+        #         driver = edge.create_driver()
+        #         filepath = os.path.join(
+        #             os.path.expanduser("~"), ".iaa", "중소기업확인서.pdf")
+        #         kogas_name = account_get("kogas", "manager_name")
+        #         kogas_phone = account_get("kogas", "manager_phone")
+        #         kogas_email = account_get("kogas", "manager_email")
+        #         return Kogas(driver=driver, manager_name=kogas_name, manager_phone=kogas_phone, manager_email=kogas_email, small_business=filepath)
+        #     except:
+        #         return None
 
         return None
 

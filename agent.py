@@ -3,18 +3,25 @@ import sys
 import os
 import traceback
 import logging
-from logger import logger_init
+# from logger import logger_init
 
 from account import account_get
-from org.incon.incon_mro import InconMRO
-from org.incon_v2.incon_v2 import InconMRO_v2
-from utils import edge
-from markets import create_market
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_path)
-if project_root not in sys.path:
-    sys.path.append(project_root)
+from utils import edge
+
+
+# fmt: off
+module_directory = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 
+    "thirdparty", "automatic")
+if module_directory not in sys.path:
+    sys.path.append(module_directory)
+print(module_directory)
+
+from org.markets import create_market
+from org.incon import InconMRO
+
+# fmt: on)
 
 _market_filter = [
     # '국방전자조달',
@@ -22,17 +29,31 @@ _market_filter = [
     # '나라장터(기타)',
 ]
 
+def init_logger(loglevel=logging.INFO):
+    from automatic.utils.logger import init_logger
+    init_logger(logging.DEBUG)
+
+    logger = logging.getLogger("Agent")
+    logger.setLevel(loglevel)
+    logger.handlers.clear()
+
+    ch = logging.StreamHandler()
+    ch.setLevel(loglevel)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 def create_data_provider():
     # create incon object
     driver = edge.create_driver()
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
-    return InconMRO_v2(driver, id, pw)
+    return InconMRO(driver, id, pw)
 
 
 def log():
-    return logging.getLogger()
+    return logging.getLogger("Agent")
 
 
 def print_bids_summary(bids):
@@ -56,19 +77,22 @@ def print_pres_summary(pres):
 
 
 def main():
-
+    init_logger()
+    
     dp = create_data_provider()
     dp.login()
 
+    dp.init_pre()
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
     print_pres_summary(pres)
-    pres = [pre for pre in pres if not pre.is_completed()]
+    # pres = [pre for pre in pres if not pre.is_completed()]
 
+    dp.init_bid()
     bids = dp.get_bid_data()
     bids = sorted(bids, key=lambda bid: bid.market)
     print_bids_summary(bids)
-    bids = [bid for bid in bids if bid.is_ready and not bid.is_completed()]
+    bids = [bid for bid in bids if not bid.is_completed()]
 
     markets = []
     # explicit market from user input
@@ -99,7 +123,7 @@ def main():
 
         # login first
         if not market.login():
-            log().warn(f"Failed to login to {market.name}")
+            log().warning(f"Failed to login to {market.name}")
             continue
 
         # register prebid
@@ -132,12 +156,14 @@ def main():
         market.finish()
 
 
+
 if __name__ == "__main__":
-    logger_init()
+    # logger_init()
 
     try:
         main()
     except Exception as e:
         traceback.print_exception(*sys.exc_info())
         log().error(e)
-        input("Press any keys to finish.")
+        
+    input("Press any keys to finish.")

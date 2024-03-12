@@ -1,1 +1,0 @@
-from .g2b_v2 import G2B_v2
