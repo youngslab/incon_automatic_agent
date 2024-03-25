@@ -357,7 +357,7 @@ def _participate_v2(driver, number, cost):
     log().info(f"messagebox: text={msgbox.text}")
     yesbtn = kepco_messagebox_get_button(msgbox, "예")
     yesbtn.click()
-
+    
     # ID: Kepco - 입찰 - 입찰서 작성 - 지문인식 투찰 버튼
     log().info(f"Kepco - 입찰 - 입찰서 작성 - 지문인식 투찰 버튼")
     fp_bid_btn = wait_element(driver, (By.XPATH, '//td[5]/div/img'))
@@ -425,7 +425,7 @@ def _participate_v2(driver, number, cost):
 
     # ---------------------------
     # ID: Kepco - 입찰 - 제출
-    # ---------------------------
+    # -------------s--------------
     auto_click(driver, By.XPATH, '//span[text()="제출"]')
     msgbox = kepco_get_messagebox(driver)
     yesbtn = kepco_messagebox_get_button(msgbox, "예")

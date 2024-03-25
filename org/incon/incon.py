@@ -42,8 +42,8 @@ class Preregistration:
     def __init__(self, data: pd.Series, callbacks):
         self.callbacks = callbacks
         self.__data = data
-        self.number = self.__data['공고번호'] if self.__data['공고번호'] else self.__data['세부품명번호']
-        self.title = self.__data['공고명'] if self.__data['공고명'] else self.__data['세부품명']
+        self.number = str(self.__data['공고번호'] if not isinstance(self.__data['공고번호'], float) else self.__data['세부품명번호'])
+        self.title = self.__data['공고명'] if not isinstance(self.__data['공고명'], float) else self.__data['세부품명']
         self.market = self.__data['조달사이트']
         self.__page = self.__data['페이지']
 
@@ -102,11 +102,10 @@ class InconMRO(am.Automatic, Logger):
         # 1. 직접의무대상 제거
         df = df[~df.iloc[:, 2].str.contains('직접이행의무대상')]
         # 2. 취소 제거
-        df = df[~df.iloc[:, 2].str.contains('취소')]
-        # 3. 사전등록완료 제거
-        # df = df[~df.iloc[:, 2].str.contains('사전등록완료')]
+        df = df[~df.iloc[:, 2].str.contains('취소')]        
         # 4. 의미 없는 단어 제거
         df.iloc[:, 2] = df.iloc[:, 2].str.replace('Copy to clipboard', '')
+        
 
         df['공고번호'] = df.iloc[:, 2].str.extract(
             r'공고번호 : (.+?)(?: 공고명)')  # 공고번호 추출
@@ -116,7 +115,8 @@ class InconMRO(am.Automatic, Logger):
         df['세부품명'] = df.iloc[:, 2].str.extract(
             r'세부품명 : (.+?)(?: 세부품명번호)')  # 공고번호 추출
         df['세부품명번호'] = df.iloc[:, 2].str.extract(
-            r'세부품명번호 : (.+?)')  # 공고명 추출
+            r'세부품명번호 : (.+)')  # 공고명 추출
+        df['세부품명'] = df['세부품명'].str.replace("사전등록완료", '')
         return df
 
     def clean_bid_list(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -191,7 +191,7 @@ class InconMRO(am.Automatic, Logger):
 
         df = self.table(
             s.Xpath("소싱완료 리스트", '//*[@id="sourcingcomplete"]/div/table'))
-
+        
         return self.clean_bid_list(df)
 
     def get_bid_data(self):

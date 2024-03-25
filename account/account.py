@@ -18,11 +18,9 @@ def __account_filepath():
     path = os.path.join(os.path.expanduser('~'), ".iaa")
     return os.path.join(path, "account.json")
 
-
 __account_data = None
 
-
-def account_get(org: str, key: str) -> str:
+def __init_account():
     global __account_data
     if __account_data == None:
         filepath = __account_filepath()
@@ -30,6 +28,12 @@ def account_get(org: str, key: str) -> str:
             raise Exception(
                 f"Failed to find the account file. filepath={filepath}")
         __account_data = __account_load_json(filepath)
+
+
+
+
+def account_get(org: str, key: str) -> str:
+    __init_account()
 
     if not __account_data.get(org):
         raise Exception(f"Failed to find the organization. org={org}")
@@ -43,4 +47,5 @@ def account_get(org: str, key: str) -> str:
 
 
 def account_get_raw_data():
+    __init_account()
     return __account_data

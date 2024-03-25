@@ -3,10 +3,7 @@ import sys
 import os
 import traceback
 import logging
-# from logger import logger_init
-
 from account import account_get
-
 from utils import edge
 
 
@@ -17,32 +14,17 @@ module_directory = os.path.join(
 if module_directory not in sys.path:
     sys.path.append(module_directory)
 print(module_directory)
-
+from automatic.utils.logger import Logger
 from org.markets import create_market
 from org.incon import InconMRO
 
 # fmt: on)
 
 _market_filter = [
-    # '국방전자조달',
-    # '한국전력',
+    '국방전자조달',
+    '한국전력',
     # '나라장터(기타)',
 ]
-
-def init_logger(loglevel=logging.INFO):
-    from automatic.utils.logger import init_logger
-    init_logger(logging.DEBUG)
-
-    logger = logging.getLogger("Agent")
-    logger.setLevel(loglevel)
-    logger.handlers.clear()
-
-    ch = logging.StreamHandler()
-    ch.setLevel(loglevel)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
 
 def create_data_provider():
     # create incon object
@@ -77,7 +59,6 @@ def print_pres_summary(pres):
 
 
 def main():
-    init_logger()
     
     dp = create_data_provider()
     dp.login()
@@ -86,7 +67,7 @@ def main():
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
     print_pres_summary(pres)
-    # pres = [pre for pre in pres if not pre.is_completed()]
+    pres = [pre for pre in pres if not pre.is_completed()]
 
     dp.init_bid()
     bids = dp.get_bid_data()
@@ -130,7 +111,7 @@ def main():
         for pre in pres:
             if pre.market != market.name:
                 continue
-
+            
             log().info(f"Registered. pre={pre}")
             if not market.register(pre):
                 log().warning(f"Failed to register. pre={pre}")
@@ -158,7 +139,8 @@ def main():
 
 
 if __name__ == "__main__":
-    # logger_init()
+
+    Logger.init("Agent", logging.DEBUG)
 
     try:
         main()

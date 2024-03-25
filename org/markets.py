@@ -200,6 +200,7 @@ class MarketFactory:
             driver = edge.create_driver()
             g2b_pw = account_get("g2b", "pw")
             g2b_id = account_get("g2b", "id")
+            print("create G2B")
             return G2B(driver, g2b_pw, g2b_id, logging.INFO)
 
         # if market == MarketType.D2B:
@@ -257,13 +258,10 @@ class MockProxy:
 
 
 def create_market(market_name, proxy=False):
-    try:
-        accounts = account_get_raw_data()
-        if accounts.get(to_code(market_name)) == None:
-            return None
-        else:
-            market_type = MarketType(market_name)
-
-            return Proxy(market_type) if proxy else MockProxy(market_type)
-    except:
+    # account정보가 있지 않는다면 market instance를 생성하지 않는다. 
+    accounts = account_get_raw_data()
+    if accounts.get(to_code(market_name)) == None:
         return None
+    else:
+        market_type = MarketType(market_name)
+        return Proxy(market_type) if proxy else MockProxy(market_type)

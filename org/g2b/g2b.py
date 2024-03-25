@@ -6,17 +6,18 @@ import automatic.selenium as s
 import automatic.win32 as w
 from automatic.selenium.utils import create_driver
 from org.g2b.res import resmgr
-from utils.logger import Logger
+from automatic.utils.logger import Logger
 import time
 import logging
 
 
-class G2B(am.Automatic, Logger):
+class G2B(am.Automatic):
     def __init__(self, driver, pw, id, loglevel=logging.INFO):
         self.__pw = pw
         self.__id = id
 
-        Logger.__init__(self, "G2B", loglevel=loglevel)
+        Logger.init("G2B", loglevel)
+        self.logger = Logger.get("G2B")
 
         selenium = s.Context(driver, timeout=20, differ=0)
         win32 = w.Context(timeout=50, differ=0)
@@ -205,12 +206,11 @@ class G2B(am.Automatic, Logger):
             # 전송 완료 후 java에서 띄우는 팝업
             self.logger.info("나라장터: 정상접수 확인")
             wConfirm = w.Title("나라장터 Java 창", "나라장터")
-            self.click(
-                w.Image("확인 버튼", resmgr.get('safeg2b_2_9_confirm_button.png'), parent=wConfirm, differ=3))
+            self.click(                w.Text("확인 버튼","OK", parent=wConfirm))
 
             self.logger.info("전자입찰 송수신")
             wHistory = s.Title("전자입찰 송수신상세이력조회 창", "전자입찰 송수신상세이력조회")
-            self.clicks(
+            self.click(
                 s.Xpath("닫기 버튼", "//span[text()='닫기']/..", parent=wHistory))
             return True
 
