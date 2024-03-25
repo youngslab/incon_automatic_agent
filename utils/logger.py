@@ -20,8 +20,6 @@ class Logger:
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
-
-
 def logger_update_handler_filename_if_neccessary(config: dict, handler_name: str, filename: str) -> bool:
     if not 'handlers' in config.keys():
         return False

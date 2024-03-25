@@ -200,7 +200,6 @@ class MarketFactory:
             driver = edge.create_driver()
             g2b_pw = account_get("g2b", "pw")
             g2b_id = account_get("g2b", "id")
-            print("create G2B")
             return G2B(driver, g2b_pw, g2b_id, logging.INFO)
 
         # if market == MarketType.D2B:

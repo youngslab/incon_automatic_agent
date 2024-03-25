@@ -6,12 +6,15 @@ import automatic.selenium as s
 import automatic.win32 as w
 from automatic.selenium.utils import create_driver
 from org.g2b.res import resmgr
+
 from automatic.utils.logger import Logger
+
 import time
 import logging
 
 
 class G2B(am.Automatic):
+
     def __init__(self, driver, pw, id, loglevel=logging.INFO):
         self.__pw = pw
         self.__id = id
@@ -42,6 +45,7 @@ class G2B(am.Automatic):
             self.click(
                 s.Xpath("로그인버튼", '//*[@id="logout"]/ul/li[1]/ul/li/a/img', parent=fLogin, differ=2))
             self.accept(s.Alert("팝업", '계속 진행하시겠습니까?', differ=2))
+
 
             self.logger.info("인증서 로그인(기업)")
             self.certificate(self.__pw)
@@ -206,12 +210,11 @@ class G2B(am.Automatic):
             # 전송 완료 후 java에서 띄우는 팝업
             self.logger.info("나라장터: 정상접수 확인")
             wConfirm = w.Title("나라장터 Java 창", "나라장터")
-            self.click(                w.Text("확인 버튼","OK", parent=wConfirm))
+            self.click(w.Text("확인 버튼","OK", parent=wConfirm))
 
             self.logger.info("전자입찰 송수신")
             wHistory = s.Title("전자입찰 송수신상세이력조회 창", "전자입찰 송수신상세이력조회")
-            self.click(
-                s.Xpath("닫기 버튼", "//span[text()='닫기']/..", parent=wHistory))
+            self.click(s.Xpath("닫기 버튼", "//span[text()='닫기']/..", parent=wHistory))
             return True
 
         except Exception as e:

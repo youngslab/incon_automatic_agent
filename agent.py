@@ -6,7 +6,6 @@ import logging
 from account import account_get
 from utils import edge
 
-
 # fmt: off
 module_directory = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 
@@ -14,6 +13,7 @@ module_directory = os.path.join(
 if module_directory not in sys.path:
     sys.path.append(module_directory)
 print(module_directory)
+
 from automatic.utils.logger import Logger
 from org.markets import create_market
 from org.incon import InconMRO

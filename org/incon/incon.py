@@ -39,11 +39,13 @@ class Bid:
 
 
 class Preregistration:
+
     def __init__(self, data: pd.Series, callbacks):
         self.callbacks = callbacks
         self.__data = data
         self.number = str(self.__data['공고번호'] if not isinstance(self.__data['공고번호'], float) else self.__data['세부품명번호'])
         self.title = self.__data['공고명'] if not isinstance(self.__data['공고명'], float) else self.__data['세부품명']
+
         self.market = self.__data['조달사이트']
         self.__page = self.__data['페이지']
 
@@ -64,8 +66,8 @@ class InconMRO(am.Automatic, Logger):
         self.pw = pw
         selenium = s.Context(driver, timeout=10, differ=0)
         am.Automatic.__init__(self, [selenium])
-
         Logger.__init__(self, "Incon", loglevel=loglevel)
+
 
     def login(self):
         self.logger.info("로그인")
@@ -105,7 +107,7 @@ class InconMRO(am.Automatic, Logger):
         df = df[~df.iloc[:, 2].str.contains('취소')]        
         # 4. 의미 없는 단어 제거
         df.iloc[:, 2] = df.iloc[:, 2].str.replace('Copy to clipboard', '')
-        
+
 
         df['공고번호'] = df.iloc[:, 2].str.extract(
             r'공고번호 : (.+?)(?: 공고명)')  # 공고번호 추출
@@ -117,6 +119,7 @@ class InconMRO(am.Automatic, Logger):
         df['세부품명번호'] = df.iloc[:, 2].str.extract(
             r'세부품명번호 : (.+)')  # 공고명 추출
         df['세부품명'] = df['세부품명'].str.replace("사전등록완료", '')
+
         return df
 
     def clean_bid_list(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -154,7 +157,7 @@ class InconMRO(am.Automatic, Logger):
         # 않기 때문에 a tag의 갯수가 페이지의 갯수가 된다.
         pageButton = s.Xpath("페이지 버튼", '//*[@id="preregistrationlist"]/div/nav/span/a')
         return 1 if not self.exist(pageButton) else self.count(pageButton)
-      
+
 
     def get_pre_data(self):
         self.logger.info("사전 등록 데이터 요청")
@@ -179,6 +182,7 @@ class InconMRO(am.Automatic, Logger):
             return None
 
     def init_bid(self):
+
         self.logger.info("입찰 데이터 가격 산정")
         df = self.__bid_data()
         for num in df.loc[df['산정금액'].isna(), '공고번호']:
@@ -235,6 +239,7 @@ class InconMRO(am.Automatic, Logger):
         self.click(s.Xpath("체크버튼", f"//td[contains(.,'{num}')]/../td/label"))
         self.click(s.Xpath("사전등록완료 버튼", f"//button[text()='사전등록완료']"))
         self.accept(s.Alert("사전등록 확인 버튼", "선택한 입찰공고를 사전등록하셨습니까?"))
+
 
     def complete_bid(self, num):
         self.go(
