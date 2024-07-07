@@ -70,7 +70,10 @@ class Kepco(am.Automatic):
         fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@title,"LOGIN")]')
         self.certificate("사업자", fCert)
 
-        return self.is_logged_in()
+        # need to wait until page reloaded
+        time.sleep(10)
+
+        return self.is_logged_in(60)
    
     def register(self, number):
         # close all tab: refresh->accept alert.
@@ -78,6 +81,9 @@ class Kepco(am.Automatic):
 
         if self.exist(s.Alert("test", "", timeout=3)):
             self.accept(s.Alert("test", ""))
+
+        # home tab이 나온 이후 공고번호 조회 탭을 연다. 
+        self.exist(s.Xpath("홈탭", '//span[text()="home"]'))
 
         self.logger.info("공고번호 조회 탭 열기")
         self.click(s.Xpath("입찰/계약 탭", '//span[text()="입찰/계약"]'))
@@ -109,7 +115,8 @@ class Kepco(am.Automatic):
         self.click(s.Xpath("참가신청", '//*[contains(@class,"x-btn-icon-el x-btn-icon-el-default-toolbar-small btn-request")]'))
 
         # 입찰담합유의사항
-        self.click(s.Xpath("답합유의사항 확인 체크박스", '//input[@title="위의 사항을 확인하였습니다."]'))
+        if self.exist(s.Xpath("답합유의사항 확인 체크박스", '//input[@title="위의 사항을 확인하였습니다."]', timeout=3)):
+            self.click(s.Xpath("답합유의사항 확인 체크박스", '//input[@title="위의 사항을 확인하였습니다."]'))
         
         self.logger.info("모든 popup닫기")
         self.close_all_popup(timeout=20)
@@ -179,6 +186,9 @@ class Kepco(am.Automatic):
             self.clicks(close_button)
 
     def participate(self, code, cost):
+        # 소수점이 있을 경우 입력이 불가하다고 안내한다. 
+        cost = int(float(cost))
+        
         # close all tab: refresh->accept alert.
         self.go(s.Url("홈페이지","https://srm.kepco.net/index.do?theme=default"))
 
@@ -235,15 +245,24 @@ class Kepco(am.Automatic):
         fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@src,"kica/kepco/kicaCert.jsp")]')
         self.certificate("은행", fCert)
 
-        self.close_all_popup(timeout=5)
+        self.close_all_popup(timeout=10)
         
         self.logger.info("추첨번호 선택")
         self.clicks(s.Xpath("추첨번호 버튼", '//span[contains(text(),"예정가격추첨갯수")]/../../div/div/table/tbody/tr/td/a/span/span/span[2]', differ=1), num_samples=4)
         
         self.logger.info(f"가격입력 f{cost}")
         self.type(s.Xpath("가격입력", '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div[1]/div/div/div[2]/input', timeout=1, visible=False), cost)
+        self.click(s.Xpath("포커스 변경",  '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div/div/div/div/div'))
         self.type(s.Xpath("가격입력", '//span[text()="확인"]/../../div/div/div/div/div[2]/div/div/div[2]/input', timeout=1, visible=False), cost)
+        self.click(s.Xpath("포커스 변경",  '//span[text()="확인"]/../../div/div/div/div/div[2]/div/div/div/div'))
+        self.click(s.Xpath("입력값 확인 버튼", '//span[text()="입력값확인"]'))
 
+        self.logger.info(f"제출")
+        self.click(s.Xpath("제출 버튼", '//span[text()="제출"]'))
+        self.close_messagebox("예", timeout=5)
+        self.close_messagebox("확인", timeout=5) # message box - 제출되었습니다.
 
-
-
+        self.certificate("사업자", fCert)
+        self.close_messagebox("확인", timeout=5) # message box - 제출되었습니다.
+        return True
+        

@@ -39,6 +39,10 @@ class G2B(am.Automatic):
         self.logger.info("로그인")
         try:
             self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
+            # 이전상태에 따라 popup이 생성되는 경우가 있다. 
+            if self.exist(s.Alert("test", "", timeout=3)):
+                self.accept(s.Alert("test", ""))
+
             fLogin = s.Id("로그인프레임", 'member_iframe')
             self.click(
                 s.Id("지문인식 예외적용 버튼", 'arg_exceptionLogin', parent=fLogin))
@@ -80,12 +84,8 @@ class G2B(am.Automatic):
         except Exception as e:
             self.logger.error(e)
             return False
-
-    def register(self, code):
-        codes = code.split(",")
-        codes = [pn.strip() for pn in codes]
-        self.logger.info(f"사전등록: {codes}")
-
+        
+    def __register(self, code):
         myPageUrl = 'https://www.g2b.go.kr/pt/menu/selectSubFrame.do?framesrc=/pt/menu/frameMypage.do'
 
         try:
@@ -128,7 +128,21 @@ class G2B(am.Automatic):
             self.logger.error(e)
             return False
 
+    def register(self, code):
+        codes = code.split(",")
+        codes = [pn.strip() for pn in codes]
+        self.logger.info(f"사전등록: {codes}")
+        for code in codes:
+            if not self.__register(code):
+                return False
+        return True
+
+        
+
     def participate(self, code, price):
+        # 소수점이 있을 경우 입력이 불가하다고 안내한다. 
+        price = int(float(price))
+
         try:
             self.logger.info(f"물품등록. code={code}, price={price}.")
 

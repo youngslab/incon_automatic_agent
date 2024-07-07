@@ -12,8 +12,8 @@ from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from multiprocessing import Process, Pipe
 from typing import List
 from enum import Enum
-# from org.d2b import D2B
-# from org.kepco import Kepco
+from org.d2b import D2B
+from org.kepco import Kepco
 from org.g2b.g2b import G2B
 # from org.kogas.kogas import Kogas
 
@@ -194,26 +194,31 @@ class Proxy:
             return False
 
 
+g_driver = None
+
 class MarketFactory:
     def create(market):
+        global g_driver 
+        if not g_driver:
+            g_driver= edge.create_driver()
+
         if market == MarketType.G2B:
-            driver = edge.create_driver()
             g2b_pw = account_get("g2b", "pw")
             g2b_id = account_get("g2b", "id")
-            return G2B(driver, g2b_pw, g2b_id, logging.INFO)
+            return G2B(g_driver, g2b_pw, g2b_id, logging.INFO)
 
-        # if market == MarketType.D2B:
-        #     d2b_id = account_get("d2b", "id")
-        #     d2b_pw = account_get("d2b", "pw")
-        #     d2b_user = account_get("d2b", "user")
-        #     d2b_cert = account_get("d2b", "cert")
-        #     return D2B(d2b_id, d2b_pw, d2b_user, d2b_cert, headless=False)
-        # elif market == MarketType.KEPCO:
-        #     kepco_id = account_get("kepco", "id")
-        #     kepco_pw = account_get("kepco", "pw")
-        #     kepco_cert = account_get("kepco", "cert")
-        #     # login to support
-        #     return Kepco(kepco_id, kepco_pw, cert_pw=kepco_cert)
+        if market == MarketType.D2B:
+            d2b_id = account_get("d2b", "id")
+            d2b_pw = account_get("d2b", "pw")
+            d2b_cert = account_get("d2b", "cert")
+            return D2B(g_driver, d2b_id, d2b_pw, d2b_cert)
+        
+        elif market == MarketType.KEPCO:
+            kepco_id = account_get("kepco", "id")
+            kepco_pw = account_get("kepco", "pw")
+            kepco_cert = account_get("kepco", "cert")
+            return Kepco(g_driver, kepco_id, kepco_pw, kepco_cert)
+        
         # if market == MarketType.G2B:
         #     g2b_pw = account_get("g2b", "pw")
         #     return G2B(headless=False, pw=g2b_pw)
@@ -249,7 +254,15 @@ class MockProxy:
 
     def register(self, prebid, *, timeout=60):
         log().info(f"Register. market={self.name}, pre={prebid}")
-        return self.market.register(prebid.number)
+        if isinstance(prebid.number, list):
+            numbers = prebid.number
+        else:
+            numbers = [prebid.number]
+
+        for number in numbers:
+            if not self.market.register(number):
+                return False
+        return True
 
     def finish(self, timeout=60):
         self.market = None

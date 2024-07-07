@@ -1,6 +1,6 @@
 
 import random
-
+import traceback
 import automatic as am
 import automatic.selenium as s
 import logging
@@ -22,10 +22,11 @@ class Bid:
         self.number = data['공고번호']
         self.title = data['공고명']
         self.price = data['산정금액']
+        self.__page = self.__data['페이지']
         self.callbacks = callbacks
 
     def complete(self):
-        self.callbacks(self.number)
+        self.callbacks(self.number, self.__page)
 
     def is_ready(self):
         # 사전등록완료? 
@@ -77,8 +78,12 @@ class InconMRO(am.Automatic, Logger):
             self.type(s.Id("암호 입력 상자", "login_pw"), self.pw)
             self.click(s.Xpath("확인 버튼",  "//button[text()='로그인']"))
 
+            # 출석 이벤트
+            self.attandance_event()
+
         except Exception as e:
             self.logger.error(e)
+            traceback.print_exc()
             return False
 
     def init_pre(self):
@@ -139,6 +144,9 @@ class InconMRO(am.Automatic, Logger):
 
         df['공고번호 / 공고명'] = df['공고번호 / 공고명'].str.replace('채택완료', '')
         df['공고번호 / 공고명'] = df['공고번호 / 공고명'].str.replace('사전등록완료', '')
+        
+        # filter NaN
+        df = df[df['공고번호 / 공고명'].notna()]
 
         # Extract data
         df['공고번호'] = df.iloc[:, 3].str.split('Copy to clipboard').str[0]
@@ -155,8 +163,22 @@ class InconMRO(am.Automatic, Logger):
         # a tag의 개수를 세어 몇개의 페이지가 존재하는지 확인한다.
         # 묶음 이동 버튼(>>) 이 포함되어 있으나, 현재 활성화 되어 있는 페이지의 경우 a tag를 갖고 있지
         # 않기 때문에 a tag의 갯수가 페이지의 갯수가 된다.
-        pageButton = s.Xpath("페이지 버튼", '//*[@id="preregistrationlist"]/div/nav/span/a')
+        pageButton = s.Xpath("페이지 버튼", '//*[@id="preregistrationlist"]/div/nav/span/a', timeout=3)
         return 1 if not self.exist(pageButton) else self.count(pageButton)
+
+    def get_num_of_bid_page(self):
+        self.go(
+            s.Url("소싱완료탭", "https://www.incon-mro.com/shop/sourcingcompletelist.php"))
+        pageButton = s.Xpath("페이지 버튼", '//*[@id="sourcingcomplete"]/div/nav/span/a', timeout=3)
+        return 1 if not self.exist(pageButton) else self.count(pageButton)
+    
+    def attandance_event(self):
+        self.go(s.Url("홈페이지", "https://www.incon-mro.com"))
+        self.click(s.Xpath("출석이벤트 버튼", '//a[text()="출석 이벤트"]'))
+        self.click(s.Id("출석하기버튼", 'btnAttendance'))
+        self.accept(s.Alert("출석확인 팝업", "출석하시겠습니까?"))
+        if self.exist(s.Alert("","")):
+            self.accept(s.Alert("",""))
 
 
     def get_pre_data(self):
@@ -182,27 +204,92 @@ class InconMRO(am.Automatic, Logger):
             return None
 
     def init_bid(self):
-
         self.logger.info("입찰 데이터 가격 산정")
-        df = self.__bid_data()
-        for num in df.loc[df['산정금액'].isna(), '공고번호']:
-            self.calculate_price(num)
+        # 모든 page에 산정금액이 없는 데이터는 금액산정. 
+        self.calculate_price_all()
+
+    def get_raw_bid_data(self):
+        return self.__bid_data()
+    
+
+     # 더 이상 공고번호로 가격산정을 할 수 없음. 
+    def calculate_price_all(self):
+        cnt = self.get_num_of_bid_page()
+        for i in range(1, cnt+1):
+            self.logger.info(f"입찰 등록데이터 요청 - {i} page")
+            self.go(
+                s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
+            
+            calculate_button = "//*[@id='sourcingcomplete']/div/table/tbody/tr/td[6][not(normalize-space())]/../td[5]/a"
+            count = self.count(s.Xpath("가격산정이 안되어 있는 공고", calculate_button))
+            for i in range(count):
+                self.click(s.Xpath("가격산정 버튼", calculate_button))
+
+                if self.exist(s.Xpath("채택 버튼", "//button[text()='채택 후 가격산정하기']", timeout=3)):
+                    self.click(s.Xpath("채택 버튼", "//button[text()='채택 후 가격산정하기']"))
+                    self.accept(s.Alert("가격산정 확인 팝업", "채택 후 가격산정 하시겠습니까?"))
+
+                self.click(s.Xpath("가격산정 버튼",  "//a[text()='가격을 산정 하겠습니다.']"))
+
+                # 사정율 범위
+                range_text = self.text(
+                    s.Xpath("사정율 범위", '//th[text()="사정율 범위"]/../td'))
+                random_range = range_text.replace("%", "").split("~")
+                min = float(random_range[0])
+                max = float(random_range[1])
+                ratio = round(random.uniform(min, max), 4)
+
+                self.type(s.Id("범위 입력 상자", "assessment_rate"), ratio)
+                self.click(
+                    s.Xpath("가격 저장", "//button[text()='가격 저장' and @class='btn_bid_amount']"))
+                self.accept(s.Alert("저장 확인 팝업", "가격산정을 저장하시겠습니까?"))
+                self.accept(s.Alert("저장 완료 팝업", "해당하는 가격을 저장했습니다."))
 
     def __bid_data(self):
-        self.logger.info("입찰 데이터 요청")
-        self.go(
-            s.Url("소싱완료탭", "https://www.incon-mro.com/shop/sourcingcompletelist.php"))
-
-        df = self.table(
-            s.Xpath("소싱완료 리스트", '//*[@id="sourcingcomplete"]/div/table'))
-        
-        return self.clean_bid_list(df)
+        dfs = []
+        cnt = self.get_num_of_bid_page()
+        for i in range(1, cnt+1):
+            self.logger.info(f"입찰 등록데이터 요청 - {i} page")
+            self.go(
+                s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
+            df = self.table(
+                s.Xpath("소싱완료 리스트", '//*[@id="sourcingcomplete"]/div/table'))
+            df = self.clean_bid_list(df)
+            df["페이지"] = i
+            dfs.append(df)
+        return pd.concat(dfs, ignore_index=True)
 
     def get_bid_data(self):
-        return [Bid(d, lambda num: self.complete_bid(num)) for _, d in self.__bid_data().iterrows()]
+        self.logger.info("입찰 데이터 요청")
+        try:
+            dfs = []
+            cnt = self.get_num_of_bid_page()
+            for i in range(1, cnt+1):
+                self.logger.info(f"입찰 등록데이터 요청 - {i} page")
+                self.go(
+                    s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
+                df = self.table(
+                    s.Xpath("소싱완료 리스트", '//*[@id="sourcingcomplete"]/div/table'))
+                df = self.clean_bid_list(df)
+                df["페이지"] = i
+                dfs.append(df)
 
-    def calculate_price(self, num):
-        self.logger.info(f"가격산정 {num}")
+            df = pd.concat(dfs, ignore_index=True)
+            return [Bid(d, lambda num, p: self.complete_bid(num, p)) for _, d in df.iterrows()]
+            # return [Preregistration(d, lambda num, p: self.complete_pre(num, p)) for _, d in df.iterrows()]
+
+        except Exception as e:
+            self.logger.error(e)
+            traceback.print_exc()
+            return None
+        
+    # 더 이상 공고번호로 가격산정을 할 수 없음. 
+    def calculate_price(self, num, page):
+
+        self.logger.info(f"가격산정 {num}, 페이지 {page}")
+        self.go(
+            s.Url("소싱완료탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={page}"))
+        
         # 견적서로 이동
         self.click(s.Xpath(
             "견적서보기 버튼",  f'//*[contains(text(),"{num}")]/../../../td/a[@title="견적서 보기"]'))
@@ -241,12 +328,36 @@ class InconMRO(am.Automatic, Logger):
         self.accept(s.Alert("사전등록 확인 버튼", "선택한 입찰공고를 사전등록하셨습니까?"))
 
 
-    def complete_bid(self, num):
-        self.go(
-            s.Url("소싱완료탭", "https://www.incon-mro.com/shop/sourcingcompletelist.php"))
+    def find_page(self, num):
+        cnt = self.get_num_of_bid_page()
+        for i in range(1, cnt+1):
+            self.logger.info(f"입찰 등록데이터 페이지로 이동 - {i} page")
+            self.go(
+                s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
+            if self.exist(s.Xpath("공고명", f"//td[contains(.,'{num}')]", timeout=2)):
+                return i
+        return None
 
-        self.click(
-            s.Xpath("체크버튼", f"//a[contains(.,'{num}')]/../../../td/label"))
-        self.click(s.Xpath("입찰참여 완료 버튼", f"//button[text()='입찰참여완료']"))
-        self.accept(s.Alert("입찰참여 완료 확인 팝업", "입찰참여완료 하시겠습니까?"))
-        self.accept(s.Alert("입찰참여 완료 안내 팝업", "아래와 같이 입찰참여완료가 진행됩니다."))
+    def complete_bid(self, num, page):
+        try:
+            # 페이지로 이동
+            self.go(
+                s.Url("소싱완료탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={page}"))
+            # 페이지 보정 (순서가 변경되는 경우가 있어 공고의 페이지가 변경 되는 경우가 있음)
+            if not self.exist(s.Xpath("공고명", f"//td[contains(.,'{num}')]", timeout=2)):
+                page = self.find_page(num)
+                self.logger.info(f"페이지에서 입찰 공고를 찾을 수 없어 다른 페이지에서 공고를 찾았습니다. {page}")
+                if not page:
+                    raise Exception(f"입찰참여 완료를 위한 공고를 찾을 수 없습니다. - {num} at page {page}")
+                self.go(
+                    s.Url("소싱완료탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={page}"))
+            self.click(
+                s.Xpath("체크버튼", f"//a[contains(.,'{num}')]/../../../td/label"))
+            self.click(s.Xpath("입찰참여 완료 버튼", f"//button[text()='입찰참여완료']"))
+            self.accept(s.Alert("입찰참여 완료 확인 팝업", "입찰참여완료 하시겠습니까?"))
+            self.accept(s.Alert("입찰참여 완료 안내 팝업", "아래와 같이 입찰참여완료가 진행됩니다."))
+            
+        except Exception as e:
+            self.logger.error(e)
+            traceback.print_exc()
+            return None

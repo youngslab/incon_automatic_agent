@@ -12,7 +12,6 @@ module_directory = os.path.join(
     "thirdparty", "automatic")
 if module_directory not in sys.path:
     sys.path.append(module_directory)
-print(module_directory)
 
 from automatic.utils.logger import Logger
 from org.markets import create_market
@@ -21,8 +20,8 @@ from org.incon import InconMRO
 # fmt: on)
 
 _market_filter = [
-    '국방전자조달',
-    '한국전력',
+    # '국방전자조달',
+    # '한국전력',
     # '나라장터(기타)',
 ]
 
@@ -59,6 +58,11 @@ def print_pres_summary(pres):
 
 
 def main():
+
+    # automatic debugging log
+    import automatic.utils
+    import logging
+    automatic.utils.Logger.init(automatic.utils.LOGGER_AUTOMATIC, logging.DEBUG)
     
     dp = create_data_provider()
     dp.login()
