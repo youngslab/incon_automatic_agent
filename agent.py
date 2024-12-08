@@ -79,6 +79,16 @@ def main():
     print_bids_summary(bids)
     bids = [bid for bid in bids if not bid.is_completed()]
 
+
+    # market name 을 변경 
+    enable_direct_excecution = True
+    if enable_direct_excecution:
+        def uniform_market_name(items):
+            for item in items:
+                item.market = item.market.replace("(직접이행)", "")
+        uniform_market_name(pres)
+        uniform_market_name(bids)
+
     markets = []
     # explicit market from user input
     if len(sys.argv) == 2:
@@ -92,6 +102,8 @@ def main():
         markets = set(markets)
         print("markets")
         print(markets)
+
+
 
         markets = [create_market(market)
                    for market in markets if market not in _market_filter]

@@ -126,8 +126,11 @@ class Kepco(am.Automatic):
         filepath = os.path.join(os.path.expanduser("~"), ".iaa", "small_business_confirmation.pdf")
         self.attach_file(filepath)
 
+        
+
         self.logger.info("약정들에 동의") 
-        self.clicks(s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1))
+        if self.exist(s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1)):
+            self.clicks(s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1))
 
         self.logger.info("제출 확인") 
         self.click(s.Xpath("제출 버튼", '//span[text()="제출"]'))
@@ -151,7 +154,8 @@ class Kepco(am.Automatic):
         wFileAttach = w.Title("파일첨부 다이얼로그","[TITLE:열기; CLASS:#32770]")
         self.type(w.Control("파일입력상자", "Edit1", parent=wFileAttach, differ=3), f"\"{filepath}\"")
         # TODO: button이 한개 더 있음.. 버튼의 이름을 통해 확인을 하는 것이 좋을 것 같다. 
-        self.click(w.Control("확인 버튼", "Button2", parent=wFileAttach))
+
+        self.click(w.Control("확인 버튼", "Button2", parent=wFileAttach, differ=5))
 
 
     def close_all_popup(self, timeout=10):
@@ -251,8 +255,11 @@ class Kepco(am.Automatic):
         self.clicks(s.Xpath("추첨번호 버튼", '//span[contains(text(),"예정가격추첨갯수")]/../../div/div/table/tbody/tr/td/a/span/span/span[2]', differ=1), num_samples=4)
         
         self.logger.info(f"가격입력 f{cost}")
-        self.type(s.Xpath("가격입력", '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div[1]/div/div/div[2]/input', timeout=1, visible=False), cost)
-        self.click(s.Xpath("포커스 변경",  '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div/div/div/div/div'))
+        # self.type(s.Xpath("가격입력", '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div[1]/div/div/div[2]/input', timeout=1, visible=False), cost)
+        # td[1] -> td 변경: 어떤 input(부가가치세 포함 따위의 글자가 추가됨)의 위치가 다르다. 기존 구조와 동일한지 검증해 보자.
+        self.type(s.Xpath("가격입력", '//span[text()="숫자"]/../../div/div/table/tbody/tr/td/div[1]/div/div/div[2]/input', timeout=1, visible=False), cost)
+        # self.click(s.Xpath("포커스 변경",  '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div/div/div/div/div'))
+        self.click(s.Xpath("포커스 변경",  '//span[text()="숫자"]/../../div/div/table/tbody/tr/td/div/div/div/div/div'))
         self.type(s.Xpath("가격입력", '//span[text()="확인"]/../../div/div/div/div/div[2]/div/div/div[2]/input', timeout=1, visible=False), cost)
         self.click(s.Xpath("포커스 변경",  '//span[text()="확인"]/../../div/div/div/div/div[2]/div/div/div/div'))
         self.click(s.Xpath("입력값 확인 버튼", '//span[text()="입력값확인"]'))

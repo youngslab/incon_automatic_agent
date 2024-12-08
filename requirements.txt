@@ -1,6 +1,9 @@
 selenium
-win32gui
-pynput
-pyautogui
-pyautoit
-plum-py
+webdriver_manager
+pandas
+lxml
+
+# pynput
+# pyautogui
+# pyautoit
+# plum-py

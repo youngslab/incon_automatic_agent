@@ -173,7 +173,7 @@ class D2B(am.Automatic):
         wFileAttach = w.Title("파일첨부 다이얼로그","[TITLE:열기; CLASS:#32770]")
         self.type(w.Control("파일입력상자", "Edit1", parent=wFileAttach, differ=3), f"\"{filepath}\"")
         # TODO: button이 한개 더 있음.. 버튼의 이름을 통해 확인을 하는 것이 좋을 것 같다. 
-        self.click(w.Control("확인 버튼", "Button2", parent=wFileAttach))
+        self.click(w.Control("확인 버튼", "Button2", parent=wFileAttach, differ=5))
 
 
         self.clicks(
