@@ -135,7 +135,11 @@ class Kepco(am.Automatic):
         self.logger.info("제출 확인") 
         self.click(s.Xpath("제출 버튼", '//span[text()="제출"]'))
         self.close_messagebox("예", timeout=10)
-        self.close_messagebox("확인", timeout=10)
+        self.close_messagebox("확인", timeout=10) 
+
+        #  확인 별도 제출요구서류가 있는 경우 첨부 여부를 반드시 확인하시기 바랍니다. 입찰참가신청서를 제출하시겠습니까?
+        #  예/아니오
+        self.close_messagebox("예", timeout=10) 
 
         # certificate
         self.logger.info("인증서 제출")
@@ -174,14 +178,25 @@ class Kepco(am.Automatic):
             time.sleep(1)
 
     def close_messagebox(self, button, timeout=1):
-        # message box에 button이 여러개. 
+        self.logger.info(f"메세지 박스 닫기: {button}")
         message_box = '//div[contains(@class,"x-window") and contains(@class,"x-message-box")]'
+
+        # messesage box text 출력
+        text = s.Xpath(f"메세지 박스 {button} 버튼 텍스트", message_box, timeout=timeout)
+        if self.exist(text):
+            self.logger.info(f"Messagebox: {' '.join(self.text(text).splitlines())}" )
+
+        # message box에 button이 여러개. 
         message_box_buttons ='div[3]/div/div/a'
         message_box_button = f"span/span/span[text()='{button}']/../../.."
         button = s.Xpath(f"메세지 박스 {button} 버튼", "/".join([message_box, message_box_buttons, message_box_button]), timeout=timeout)
-        if self.exist(button):
-            self.click(button)
-            
+
+        if not self.exist(button):
+            return
+
+        if not self.click(button):
+            self.logger.info("메세지 박스 닫기 성공")
+        
     def close_all_notices(self):
         notices = '//div[contains(@class,"x-panel") and contains(@class,"x-panel-popup")]'
         notice_close_buttons = 'div/div/div/a/span/span/span[2]'
