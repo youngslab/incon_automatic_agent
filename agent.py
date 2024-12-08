@@ -1,4 +1,5 @@
 
+import argparse
 import sys
 import os
 import traceback
@@ -163,5 +164,11 @@ if __name__ == "__main__":
     except Exception as e:
         traceback.print_exception(*sys.exc_info())
         log().error(e)
-        
-    input("Press any keys to finish.")
+
+        # For debugging porpuse, Stop before finishing 
+        parser = argparse.ArgumentParser(description="Debug option example")
+        parser.add_argument('--debug', action='store_true', help="Enable debug mode")
+        args = parser.parse_args()
+        debug = args.debug
+        if args.debug:
+            input("Press any keys to finish.")
