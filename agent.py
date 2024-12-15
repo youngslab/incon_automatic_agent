@@ -1,11 +1,20 @@
 
 import argparse
+from hmac import new
+from operator import is_
 import sys
 import os
 import traceback
 import logging
+from turtle import title
+
+from attrs import field
+from pandas import to_numeric
 from account import account_get
 from utils import edge
+from utils.reporter_slack import report
+from utils.table import to_agent_table
+
 
 # fmt: off
 module_directory = os.path.join(
@@ -23,7 +32,8 @@ from org.incon import InconMRO
 _market_filter = [
     # '국방전자조달',
     # '한국전력',
-    # '나라장터(기타)',
+    '나라장터',
+    '나라장터(직접이행)',
 ]
 
 def create_data_provider():
@@ -37,25 +47,19 @@ def create_data_provider():
 def log():
     return logging.getLogger("Agent")
 
-
 def print_bids_summary(bids):
     log().info(" --------------- ")
     log().info(" - Bids Summary ")
     log().info(" --------------- ")
-    for bid in bids:
-        check = 'v' if bid.is_completed() else ' '
-        log().info(f"    [{check}] {bid}")
-    log().info(" --------------- ")
+    print(to_agent_table(bids, ["is_completed", "market", "number", "price", "title"]))
 
 
 def print_pres_summary(pres):
     log().info(" --------------- ")
     log().info(" - Pres Summary ")
     log().info(" --------------- ")
-    for pre in pres:
-        check = 'v' if pre.is_completed() else ' '
-        log().info(f"    [{check}] {pre}")
-    log().info(" --------------- ")
+    table = to_agent_table(pres, [ "is_completed", "market", "number", "title"])
+    print(table)
 
 
 def main():
@@ -72,13 +76,13 @@ def main():
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
     print_pres_summary(pres)
-    pres = [pre for pre in pres if not pre.is_completed()]
+    pres = [pre for pre in pres if not pre.is_completed]
 
     dp.init_bid()
     bids = dp.get_bid_data()
     bids = sorted(bids, key=lambda bid: bid.market)
     print_bids_summary(bids)
-    bids = [bid for bid in bids if not bid.is_completed()]
+    bids = [bid for bid in bids if not bid.is_completed]
 
 
     # market name 을 변경 
@@ -153,7 +157,15 @@ def main():
         log().info(f"Finish to process. market={market.name}")
         market.finish()
 
+    bids = dp.get_bid_data()
+    # report to slack channel
+    import account
+    token=account.account_get("slack", "token")
+    channel=account.account_get("slack", "channel")
+    report(token, channel, f"From {os.getlogin()}")
+    report(token, channel, f'```{to_agent_table(bids, ["is_completed", "market", "number", "price", "title"])}```')
 
+    
 
 if __name__ == "__main__":
 

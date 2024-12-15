@@ -6,4 +6,9 @@ lxml
 # pynput
 # pyautogui
 # pyautoit
+pytesseract
 # plum-py
+opencv-python
+
+prettytable
+slack_sdk

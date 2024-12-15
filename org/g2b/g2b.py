@@ -206,6 +206,14 @@ class G2B(am.Automatic):
             self.click(s.Id("확인 체크버튼", "noticeCheckY", parent=wBid))
             self.click(s.Xpath("확인 버튼", '//span[text()="확인"]/..', parent=wBid))
 
+            # 여기서 투찰 금액이 130% 이상이면 popup(확인/취소)이 뜬다. 
+            alert = s.Alert("금액확인 팝업", "", timeout=3)
+            if self.exist(alert):
+                self.logger.error(f"금액이 맞지 않습니다. {self.text(alert)}")
+                self.dismiss(s.Alert("금액확인 팝업", ""))
+                return False
+
+
             wLottery = s.Title("추첨번호 선택 창", "추첨번호 선택")
             self.clicks(s.Name("추첨번호 체크박스", "check",
                         parent=wLottery), num_samples=2)

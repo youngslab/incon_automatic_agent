@@ -33,6 +33,7 @@ class Bid:
         # 사전등록완료? 
         return '사전등록완료' in self.__data['공고번호 / 공고명']
 
+    @property
     def is_completed(self):
         return '입찰참여완료' in self.__data['공고번호 / 공고명']
 
@@ -50,9 +51,13 @@ class Preregistration:
 
         self.market = self.__data['조달사이트']
 
+    def raw(self):
+        return self.__data
+
     def complete(self):
         return self.callbacks(self.number)
 
+    @property
     def is_completed(self):
         return '사전등록완료' in self.__data.iloc[2]
 
@@ -112,10 +117,11 @@ class InconMRO(am.Automatic, Logger):
         df = df[~df.iloc[:, 2].str.contains('취소')]        
         # 4. 의미 없는 단어 제거
         df.iloc[:, 2] = df.iloc[:, 2].str.replace('Copy to clipboard', '')
-
+        
 
         df['공고번호'] = df.iloc[:, 2].str.extract(
             r'공고번호 : (.+?)(?: 공고명)')  # 공고번호 추출
+        df['공고번호'] = df['공고번호'].str.replace('사전등록완료', '')
         df['공고명'] = df.iloc[:, 2].str.extract(
             r'공고명 : (.+?)(?: 판단번호|$)')  # 공고명 추출
         df['판단번호'] = df.iloc[:, 2].str.extract(r'판단번호 : (\d+)')  # 판단번호 추출
