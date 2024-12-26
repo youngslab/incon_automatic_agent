@@ -32,8 +32,8 @@ from org.incon import InconMRO
 _market_filter = [
     # '국방전자조달',
     # '한국전력',
-    '나라장터',
-    '나라장터(직접이행)',
+    # '나라장터',
+    # '나라장터(직접이행)',
 ]
 
 def create_data_provider():
@@ -164,7 +164,7 @@ def main():
     channel=account.account_get("slack", "channel")
     report(token, channel, f"From {os.getlogin()}")
     report(token, channel, f'```{to_agent_table(bids, ["is_completed", "market", "number", "price", "title"])}```')
-
+    
     
 
 if __name__ == "__main__":

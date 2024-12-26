@@ -22,7 +22,7 @@ class Bid:
         self.market = data['조달사이트']
         self.number = data['공고번호']
         self.title = data['공고명']
-        self.price = re.sub(r'[^0-9]', '', data['산정금액'])
+        self.price = data['산정금액']
         self.__page = self.__data['페이지']
         self.callbacks = callbacks
 
@@ -151,6 +151,10 @@ class InconMRO(am.Automatic, Logger):
         
         # filter NaN
         df = df[df['공고번호 / 공고명'].notna()]
+
+        df['산정금액'] = df['산정금액'].str.replace('Copy to clipboard', "")
+        df['산정금액'] = df['산정금액'].str.replace(" ", "", regex=False)
+        df['산정금액'] = df['산정금액'].str.replace(",", "", regex=False)
 
         # Extract data
         df['공고번호'] = df.iloc[:, 3].str.split('Copy to clipboard').str[0]
@@ -289,19 +293,8 @@ class InconMRO(am.Automatic, Logger):
     def get_bid_data(self):
         self.logger.info("입찰 데이터 요청")
         try:
-            dfs = []
-            cnt = self.get_num_of_bid_page()
-            for i in range(1, cnt+1):
-                self.logger.info(f"입찰 등록데이터 요청 - {i} page")
-                self.go(
-                    s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
-                df = self.table(
-                    s.Xpath("소싱완료 리스트", '//*[@id="sourcingcomplete"]/div/table'))
-                df = self.clean_bid_list(df)
-                df["페이지"] = i
-                dfs.append(df)
-
-            df = pd.concat(dfs, ignore_index=True)
+            df = self.get_raw_bid_data()
+            df = self.clean_bid_list(df)
             return [Bid(d, lambda num, p: self.complete_bid(num, p)) for _, d in df.iterrows()]
             # return [Preregistration(d, lambda num, p: self.complete_pre(num, p)) for _, d in df.iterrows()]
 
