@@ -8,13 +8,9 @@ import pandas as pd
 import numpy as np
 import re
 
-from utils.logger import Logger
-
-
 class Callbacks():
     def __init__(self, complete):
         self.complete = complete
-
 
 class Bid:
     def __init__(self, data, callbacks):
@@ -66,13 +62,13 @@ class Preregistration:
 
 
 # New Incon MRO mall
-class InconMRO(am.Automatic, Logger):
+class InconMRO(am.Automatic):
     def __init__(self, driver, id, pw, loglevel=logging.DEBUG):
         self.id = id
         self.pw = pw
         selenium = s.Context(driver, timeout=10, differ=0)
         am.Automatic.__init__(self, [selenium])
-        Logger.__init__(self, "Incon", loglevel=loglevel)
+        self.logger = logging.getLogger("Incon")
 
 
     def login(self):
