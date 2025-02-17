@@ -126,11 +126,10 @@ class Kepco(am.Automatic):
         filepath = os.path.join(os.path.expanduser("~"), ".iaa", "small_business_confirmation.pdf")
         self.attach_file(filepath)
 
-        
-
         self.logger.info("약정들에 동의") 
-        if self.exist(s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1)):
-            self.clicks(s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1))
+        check_boxes = s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1, multiple=True)
+        if self.exist(check_boxes):
+            self.clicks(check_boxes)
 
         self.logger.info("제출 확인") 
         self.click(s.Xpath("제출 버튼", '//span[text()="제출"]'))

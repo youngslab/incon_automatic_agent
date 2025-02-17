@@ -167,13 +167,13 @@ class InconMRO(am.Automatic):
         # a tag의 개수를 세어 몇개의 페이지가 존재하는지 확인한다.
         # 묶음 이동 버튼(>>) 이 포함되어 있으나, 현재 활성화 되어 있는 페이지의 경우 a tag를 갖고 있지
         # 않기 때문에 a tag의 갯수가 페이지의 갯수가 된다.
-        pageButton = s.Xpath("페이지 버튼", '//*[@id="preregistrationlist"]/div/nav/span/a', timeout=3)
+        pageButton = s.Xpath("페이지 버튼", '//*[@id="preregistrationlist"]/div/nav/span/a', timeout=3, multiple=True)
         return 1 if not self.exist(pageButton) else self.count(pageButton)
 
     def get_num_of_bid_page(self):
         self.go(
             s.Url("소싱완료탭", "https://www.incon-mro.com/shop/sourcingcompletelist.php"))
-        pageButton = s.Xpath("페이지 버튼", '//*[@id="sourcingcomplete"]/div/nav/span/a', timeout=3)
+        pageButton = s.Xpath("페이지 버튼", '//*[@id="sourcingcomplete"]/div/nav/span/a', timeout=3, multiple=True)
         return 1 if not self.exist(pageButton) else self.count(pageButton)
     
     def attandance_event(self):
@@ -190,6 +190,7 @@ class InconMRO(am.Automatic):
         try:
             dfs = []
             cnt = self.get_num_of_predata_page()
+            self.logger.debug(f"사전등록 페이지: {cnt}")
             for i in range(1, cnt+1):
                 self.logger.info(f"사전등록데이터 요청 - {i} page")
                 self.go(
