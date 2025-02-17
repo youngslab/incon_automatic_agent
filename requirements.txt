@@ -4,8 +4,8 @@ pandas
 lxml
 
 # pynput
-# pyautogui
-# pyautoit
+pyautogui
+pyautoit
 pytesseract
 # plum-py
 opencv-python
