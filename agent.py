@@ -83,7 +83,7 @@ def get_reporter() -> SlackReporter:
 
 
 
-def main():   
+def main(target_markets):   
     dp = create_data_provider()
     dp.login()
 
@@ -100,7 +100,8 @@ def main():
     bids = [bid for bid in bids if not bid.is_completed]
 
 
-    # market name 을 변경 
+    # 직접이행 지원
+    #  - market name 을 변경 
     enable_direct_excecution = True
     if enable_direct_excecution:
         def uniform_market_name(items):
@@ -110,18 +111,15 @@ def main():
         uniform_market_name(bids)
 
     markets = []
-    # explicit market from user input
-    if len(sys.argv) == 2:
-        market = sys.argv[1]
-        print(f"Create a market \"{market}\" explicitly.")
-        markets = [create_market(market)]
-    else:
-        # markets(asynchronously)
-        markets = [bid.market for bid in bids] + \
-            [pre.market for pre in pres]
-        markets = set(markets)
-        markets = [create_market(market)
-                   for market in markets if market not in _market_filter]
+    markets = [bid.market for bid in bids] + \
+        [pre.market for pre in pres]
+    markets = set(markets)
+    # filter for user specific markets
+    if len(target_markets) != 0:
+        markets = [ market for market in markets if market in target_markets ]
+    # filter for supported markets
+    markets = [create_market(market)
+                for market in markets if market not in _market_filter]
 
     markets = [market for market in markets if market is not None]
 
@@ -183,10 +181,13 @@ def main():
     bids = dp.get_bid_data()
     reporter.send_message(f'```{to_agent_table(bids, ["is_completed", "market", "number", "price", "title"])}```')
 
-    
-    
-
 if __name__ == "__main__":
+    # For debugging porpuse, Stop before finishing 
+    parser = argparse.ArgumentParser(description="Debug option example")
+    parser.add_argument('--debug', action='store_true', help="Enable debug mode")
+    parser.add_argument("--markets", nargs="+", help="List of markets", default=[])
+    args = parser.parse_args()
+
     # setup reporter
     get_reporter().send_message(f"Incon agent start now. From {os.getlogin()}")
 
@@ -198,7 +199,7 @@ if __name__ == "__main__":
     setup_agent_logger(loggers, log_path)
 
     try:
-        main()
+        main(args.markets)
     except Exception as e:
         exc_info = sys.exc_info()
         if exc_info[0] is not None:
@@ -213,10 +214,5 @@ if __name__ == "__main__":
             time.sleep(1)
         get_reporter().send_file(log_path, title="log file", initial_comment="Check this file.")
 
-        # For debugging porpuse, Stop before finishing 
-        parser = argparse.ArgumentParser(description="Debug option example")
-        parser.add_argument('--debug', action='store_true', help="Enable debug mode")
-        args = parser.parse_args()
-        debug = args.debug
         if args.debug:
             input("Press any keys to finish.")
