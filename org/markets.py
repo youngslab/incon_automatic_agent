@@ -15,6 +15,7 @@ from enum import Enum
 from org.d2b import D2B
 from org.kepco import Kepco
 from org.g2b.g2b import G2B
+from org.g2b.g2b_new_gen import G2B_new_gen
 # from org.kogas.kogas import Kogas
 
 from account import account_get, account_get_raw_data
@@ -200,12 +201,19 @@ class MarketFactory:
     def create(market):
         global g_driver 
         if not g_driver:
-            g_driver= edge.create_driver()
+            # 금융인증서에 대한 로그인을 위해 예전 접근한 이력을 남겨야 하기 때문에 
+            # 드라이버가 특정 프로파일에서 동작해야 한다. 
+            g_driver= edge.create_driver(profile="markets")
 
         if market == MarketType.G2B:
             g2b_pw = account_get("g2b", "pw")
             g2b_id = account_get("g2b", "id")
-            return G2B(g_driver, g2b_pw, g2b_id, logging.INFO)
+            # 공동인증서(기업)
+            public_cert = account_get("g2b", "public_cert")
+            # 금융인증서서
+            financial_cert = account_get("g2b", "financial_cert")
+            # return G2B(g_driver, g2b_pw, g2b_id, logging.INFO)
+            return G2B_new_gen(g_driver, g2b_pw, g2b_id, public_cert, financial_cert)
 
         if market == MarketType.D2B:
             d2b_id = account_get("d2b", "id")
