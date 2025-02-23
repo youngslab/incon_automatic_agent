@@ -8,6 +8,7 @@ from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 def create_driver(headless=False, *, profile=None):
     options = webdriver.EdgeOptions()
+    options.add_argument("window-size=1200,800")  
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
     if headless:
         options.add_argument('headless')

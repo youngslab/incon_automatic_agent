@@ -13,7 +13,12 @@ def adjust_cell(cell, max_width):
     """
     셀의 내용을 max_width에 맞게 자르고, 폭이 초과하면 '…' 추가
     """
-    cell_width = wcswidth(cell)  # 실제 출력 폭 계산
+    try:
+        cell_width = wcswidth(cell)  # 실제 출력 폭 계산
+    except Exception as e:
+        print(f"cell: {cell}, e: {e}")
+        raise
+    
     if cell_width > max_width:
         # 문자열을 최대 너비에 맞게 정확히 자르기
         truncated = ""

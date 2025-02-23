@@ -87,7 +87,7 @@ class G2B_new_gen(am.Automatic):
             user_management_btn = s.Xpath("이용자관리 버튼","//a[contains(@class, 'btn') and span[text()='이용자관리']]")
             self.click(user_management_btn)
 
-            self_info_check_management_btn = s.Xpath("자기정보확인관리 버튼", "//a[contains(@class, 'btn') and span[text()='자기정보확인관리/등록증출력']]")
+            self_info_check_management_btn = s.Xpath("자기정보확인관리 버튼", "//a[contains(@class, 'btn') and span[text()='자기정보확인관리/등록증출력']]", differ=5)
             self.click(self_info_check_management_btn)
 
             supplied_items_btn = s.Xpath("공급물품 버튼", "//a[text()='공급물품']", visible=False, differ=5)
@@ -167,7 +167,7 @@ class G2B_new_gen(am.Automatic):
             participate_process_btn = s.Xpath("입찰진행 버튼", "//button[text()='입찰진행']", visible=False, differ=1)
             self.click(participate_process_btn)
 
-            if self.exist(s.Xpath("완료 버튼","//button[text()='완 료']", visible=False, differ=1)):
+            if self.exist(s.Xpath("완료 버튼","//button[text()='완 료']", visible=False, differ=1, timeout=10)):
                 self.logger.info("이미 완료되었습니다.")
                 return True
 
@@ -224,6 +224,11 @@ class G2B_new_gen(am.Automatic):
             agree = s.Xpath("투찰금액 동의", "//input[@title='위 투찰금액 결정 관련 유의사항을 숙지하고, 이에 동의합니다.']") 
             self.click(agree)
 
+            # 알림 메세지가 있을 수 있음. - 본 사업은 면세사업으로....
+            confirm_btn = s.Xpath('확인 버튼', "//input[@value='확인']", timeout=5)
+            if self.exist(confirm_btn):
+                self.click(confirm_btn)
+
             cost_input = s.Xpath("총액", "//input[@title='총액']") 
             self.type(cost_input, price)
 
@@ -233,7 +238,7 @@ class G2B_new_gen(am.Automatic):
             transfer_btn = s.Xpath("송신 버튼", "//input[@value='송신']", visible=False)
             self.click(transfer_btn)
 
-            confirm_btn = s.Xpath('확인 버튼', "//input[@value='확인']")
+            confirm_btn = s.Xpath('확인 버튼', "//input[@value='확인']", differ=5)
             self.click(confirm_btn)
 
             aggree = s.Xpath("동의", "//input[@title='위 사항을 모두 확인하였으며, 이에 동의합니다.']")
@@ -255,20 +260,20 @@ class G2B_new_gen(am.Automatic):
             popup = s.Xpath("팝업", "//div[contains(text(),'선택한 공동인증서를 계속 사용')]", differ=3, timeout=3)
             if self.exist(popup):
                 self.click(yes_btn) 
-                confirm_btn = s.Xpath("확인", "//input[@value='확인']")
+                confirm_btn = s.Xpath("확인 버튼", "//input[@value='확인']", differ=3)
                 self.click(confirm_btn)
             else:
                 auth_btn = s.Xpath("공동인증 버튼", "//input[@value='공동인증']")
                 self.click(auth_btn)
                 # 복수 ID에 대한 경고
-                confirm_btn = s.Xpath("확인 버튼", "//input[@value='확인']", differ=1)
+                confirm_btn = s.Xpath("확인 버튼", "//input[@value='확인']", differ=3)
                 self.click(confirm_btn)
 
                 frame = s.Id("인증서 프레임", "dscert")
-                cert_pw_input = s.Id("패스워드입력성자 ", "input_cert_pw", parent=frame, differ=2)
+                cert_pw_input = s.Id("패스워드입력성자 ", "input_cert_pw", parent=frame, differ=10)
                 self.type(cert_pw_input, self.__cert_public)
 
-                btn = s.Id("확인버튼", "btn_confirm_iframe", parent=frame, differ=2)
+                btn = s.Id("확인버튼", "btn_confirm_iframe", parent=frame, differ=3)
                 self.click(btn)
 
             confirm_btn = s.Xpath("확인", "//input[@value='확인']", differ=3)
