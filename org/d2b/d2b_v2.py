@@ -57,6 +57,11 @@ class D2B(am.Automatic):
             self.logger.info("로그인 - 인증서")
             self.type(s.Id("인증서 비밀번호 입력상자", "certPwd"), self.__cert_pw)
             self.click(s.Xpath("인증서 선택 확인 버튼", '//*[@id="nx-cert-select"]/div[4]/button[1]'))
+
+            # validate login is completed
+            if self.exist(s.Id("로그인 버튼","_mLogin", timeout=3, differ=10)):
+                self.logger.info("로그인 버튼이 아직 있습니다. 로그인 실패로 간주합니다.")
+                return False
             
             return True
 
