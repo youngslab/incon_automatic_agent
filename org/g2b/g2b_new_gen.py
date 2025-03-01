@@ -185,11 +185,13 @@ class G2B_new_gen(am.Automatic):
 
                 request = s.Xpath("본인확인요청","//input[@value='본인확인요청']", differ=5)
                 self.click(request)
-                self.click(request)
 
-                # 여기서 한번도 
-                
-                # 금융인증서 
+                # 필요하다면 한번 더 클릭 요청 
+                request = s.Xpath("본인확인요청","//input[@value='본인확인요청']", differ=5)
+                if self.exist(request):
+                    self.click(request)
+
+                # 금융인증서
                 cert_srv_frame = s.Id("금융인증서비스 개인", "finCertSdkIframe")
                 first_access_elem = s.Xpath("첫 접속 안내.", "//b[text()='금융인증서를 이용하기 위해 클라우드 저장소에 연결합니다']", parent=cert_srv_frame)
                 need_wait = False
