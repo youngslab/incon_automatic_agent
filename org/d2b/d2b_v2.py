@@ -167,7 +167,7 @@ class D2B(am.Automatic):
 
         self.logger.info("서약서 작성")
         self.clicks(s.Xpath("서약서 체크박스", '//input[@type="checkbox" and @name="a1"]', differ=1))
-        self.click(s.Id("확인버튼", 'btn_oath_confirm'))
+        self.click(s.Id("확인버튼", 'btn_oath_confirm', differ=5))
 
         self.logger.info("견적서 작성")
         self.type(s.Id("견적금액 작성", "input_amount"), cost)
@@ -199,7 +199,7 @@ class D2B(am.Automatic):
     def get_pre_registration_table(self):
         # 참가신청서 조회 페이지로 이동이 안되는 경우가 있다. 페이지가 아직 로딩이 안된 상태여서? 
         time.sleep(3)
-        self.go(s.Url("물품 참가신청서 조회 페이지", 'https://www.d2b.go.kr/pdb/bid/goodsBidApplyList.do?key=130&pageDivs=G'))
+        self.go(s.Url("물품 참가신청서 조회 페이지", 'https://www.d2b.go.kr/pdb/bid/goodsBidSubmitList.do'))
         time.sleep(3)
         tables = []
 
@@ -220,20 +220,30 @@ class D2B(am.Automatic):
         self.logger.info("사전등록이 완료된 입찰 참가 시작")
 
         # 사전등록이 되어 있는지 검증.
+        self.logger.warning("참가신청서 검색.")
         regs = self.get_pre_registration_table()
-        row = regs[(regs[1].notna()) & (regs[1].str.contains(code))]
+        row = regs[(regs[0].notna()) & (regs[0].str.contains(code))]
         if row.empty:
             self.logger.warning("검색된 참가신청서가 없습니다.")
+            column_values = ', '.join(row[0].astype(str).tolist())
+            self.logger.info(f"0번째 컬럼의 내용: {column_values}")
             return False
-        if "투찰가능" not in row.iloc[0,6]:
-            self.logger.warning("투찰 가능하지 않습니다.")
+        
+        status = str(row.iloc[0,5])
+        self.logger.info(f"참가신청서 상태: {status}")
+        if "제출" == status:
+            self.logger.info("이미 투찰이 완료되었습니다.")
+            return True
+        
+        elif "미제출" != status:
+            self.logger.error(f"알수 없는 상태입니다. - {row.iloc[0,5]}")
             return False
         
         # TODO: 입찰서 진행 상태 확인..
-        self.go(s.Url("입찰서제출(물품)", "https://www.d2b.go.kr/pdb/bid/goodsBidSubmitList.do?key=132"))
+        self.go(s.Url("입찰서제출(물품)", "https://www.d2b.go.kr/pdb/bid/goodsBidSubmitList.do"))
         item = s.Xpath("입찰서 선택", f'//tr/td[1]/div/span[contains(text(),"{code}")]', differ=3)
         if not self.exist(item):
-            self.go(s.Url("입찰서제출(용역)", "https://www.d2b.go.kr/pdb/bid/serviceBidSubmitList.do?key=132"))
+            self.go(s.Url("입찰서제출(용역)", "https://www.d2b.go.kr/pdb/bid/serviceBidSubmitList.do"))
         self.click(item)
         self.click(s.Id("입찰서 작성 버튼", 'btn_bid_regi'))
 

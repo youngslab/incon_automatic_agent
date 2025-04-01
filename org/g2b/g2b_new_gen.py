@@ -36,11 +36,14 @@ class G2B_new_gen(am.Automatic):
             self.logger.info("홈페이지로 이동")
             self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
 
-            popup_close_btn = s.Xpath("팝업닫기", "//input[@title='오늘 하루 이 창을 열지 않음']",multiple=True, visible=False, differ=1)
+            # 팝업이 와전히 생성될 때까지 기다린다.
+            time.sleep(5)
+            
+            popup_close_btn = s.Xpath("팝업닫기", "//input[@title='오늘 하루 이 창을 열지 않음']", multiple=True, visible=False, differ=2)
             if self.exist(popup_close_btn):
                 self.clicks(popup_close_btn)
 
-            logout_btn = s.Xpath("로그아웃버튼", "//span[text()='로그아웃']/../a")
+            logout_btn = s.Xpath("로그아웃버튼", "//span[text()='로그아웃']/../a", differ=5, timeout=5, clickable=True)
             if self.exist(logout_btn):
                 self.logger.info("이미 로그인 되었습니다.")
                 return True 
@@ -84,7 +87,7 @@ class G2B_new_gen(am.Automatic):
             logging.info("입찰 참가 페이지로 이동")
             self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
 
-            user_management_btn = s.Xpath("이용자관리 버튼","//a[contains(@class, 'btn') and span[text()='이용자관리']]")
+            user_management_btn = s.Xpath("이용자관리 버튼","//a[contains(@class, 'btn') and span[text()='이용자관리']]", clickable=False)
             self.click(user_management_btn)
 
             self_info_check_management_btn = s.Xpath("자기정보확인관리 버튼", "//a[contains(@class, 'btn') and span[text()='자기정보확인관리/등록증출력']]", differ=5)
@@ -93,10 +96,12 @@ class G2B_new_gen(am.Automatic):
             supplied_items_btn = s.Xpath("공급물품 버튼", "//a[text()='공급물품']", visible=False, differ=5)
             self.click(supplied_items_btn)
 
-            detail_item_number_text = s.Xpath("세부품목번호",f"//nobr[text()='{code}']")
-            if self.exist(detail_item_number_text):
-                print("이미등록 되어 있습니다.")
-                return True
+            # table 로 변경 되면서 한 페이지에 모든 데이터가 보이지 않는다. table 을 사용해도 전체 데이터가 보이지 않음. 
+            # 따라서 사전 검증을 하지 않는 것으로 한다. 
+            # detail_item_number_text = s.Xpath("세부품목번호",f"//nobr[text()='{code}']", clickable=False, visible=False )
+            # if self.exist(detail_item_number_text):
+            #     print("이미등록 되어 있습니다.")
+            #     return True
 
             modification_btn = s.Xpath("수정버튼", "//input[@value='수정(자기정보확인)']", timeout=5)
             if self.exist(modification_btn):
@@ -155,8 +160,9 @@ class G2B_new_gen(am.Automatic):
             bid_btn = s.Xpath("입찰 버튼","//a[contains(@class, 'btn') and span[text()='입찰']]")
             self.click(bid_btn)
 
-            bid_notice_list = s.Xpath("입찰공고목록 버튼", "//a[contains(@class, 'btn') and span[text()='입찰공고목록']]", differ=3)
-            self.click(bid_notice_list)
+            # 입찰공고목록 버튼이 두 개 존재하기 때문에 둘중 하나를 클릭해야 한다. 
+            bid_notice_list = s.Xpath("입찰공고목록 버튼", "//a[contains(@class, 'btn') and span[text()='입찰공고목록']]", visible=False, multiple=True, differ=3)
+            self.clicks(bid_notice_list, num_samples=1)
 
             bid_notice_number_btn = s.Xpath("입찰공고번호 입력", "//input[@title='입찰공고번호']")
             self.type(bid_notice_number_btn, code)
@@ -208,8 +214,10 @@ class G2B_new_gen(am.Automatic):
 
                 cert_password(self.__cert_finance)
 
-            btn = s.Xpath("가격 입찰서 작성(투찰)하러 가기", "//input[@value='가격 입찰서 작성(투찰)하러 가기']")
-            self.click(btn)
+            # 가격 입찰서 작성(투찰)하러 가기
+            # 버튼이 위/아래 두 개 존재하기 때문에 둘중 하나를 클릭해야 한다. 
+            btn = s.Xpath("가격 입찰서 작성(투찰)하러 가기", "//input[@value='가격 입찰서 작성(투찰)하러 가기']", multiple=True)
+            self.clicks(btn, num_samples=1)
 
             company_info_agree = s.Xpath("기업정보제공동의", "//input[@title='기업정보 제공에 동의합니다.']", visible=False)
             self.click(company_info_agree)

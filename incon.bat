@@ -34,7 +34,7 @@ call "%VENV_PATH%\Scripts\activate.bat"
 :: 4. Python 의존성 설치
 if exist "%GIT_ROOT%\requirements.txt" (
     echo Installing dependencies...
-    pip install -r "%GIT_ROOT%\requirements.txt"
+    pip install -r "%GIT_ROOT%\requirements.txt" >nul 2>&1
 ) else (
     echo No requirements.txt found.
 )
@@ -47,7 +47,7 @@ if %ERRORLEVEL%==0 (
     taskkill /F /IM msedgedriver.exe
     timeout /t 3 >nul
 ) else (
-    echo No running edgedriver.exe found.
+    echo No running msedgedriver.exe found.
 )
 
 :: 6. agent.py 실행

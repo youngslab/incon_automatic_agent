@@ -136,6 +136,9 @@ class InconMRO(am.Automatic):
         df = df[~df['구분'].isin(['개시전', '취소'])]
         # df = df[~df['공고번호 / 공고명'].str.contains("채택완료")]
 
+        # 조달사이트가 empty로 나오는 경우가 있음. (2025/03/25)
+        df['조달사이트'] = df['조달사이트'].fillna('N/A')
+
         df['조달사이트'] = df['조달사이트'].str.replace('황금입찰', '')
 
         # Drop unused columns
@@ -360,7 +363,6 @@ class InconMRO(am.Automatic):
         self.click(s.Xpath("사전등록완료 버튼", f"//button[text()='사전등록완료']"))
         self.accept(s.Alert("사전등록 확인 버튼", "선택한 입찰공고를 사전등록하셨습니까?"))
         return True
-
 
 
     def find_page_for_bid(self, num):

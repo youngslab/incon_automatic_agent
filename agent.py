@@ -97,8 +97,8 @@ def main(target_markets):
     bids = dp.get_bid_data()
     bids = sorted(bids, key=lambda bid: bid.market)
     print_bids_summary(bids)
-    bids = [bid for bid in bids if not bid.is_completed]
 
+    bids = [bid for bid in bids if not bid.is_completed]
 
     # 직접이행 지원
     #  - market name 을 변경 
@@ -145,29 +145,34 @@ def main(target_markets):
         for pre in pres:
             if pre.market != market.name:
                 continue
-            
-            log().info(f"Registered. pre={pre}")
+            log().info(f"--------------------------------------------")
+            log().info(f"Try to register. pre={pre}")
             if not market.register(pre):
                 log().warning(f"Failed to register. pre={pre}")
+                log().info(f"--------------------------------------------")
                 continue
 
-            log().info(f"Successfully registered. pre={pre}")
             pre.complete()
             count_pre = count_pre + 1
+            log().info(f"Successfully registered. pre={pre}")
+            log().info(f"--------------------------------------------")
 
         # register bid
         for bid in bids:
             if bid.market != market.name:
                 continue
 
-            log().info(f"Participated. bid={bid}")
+            log().info(f"--------------------------------------------")
+            log().info(f"Try to participate. bid={bid}")
             if not market.participate(bid):
                 log().warning(f"Failed to participate. bid={bid}")
+                log().info(f"--------------------------------------------")
                 continue
-
-            log().info(f"Successfully participated. bid={bid}")
+            
             bid.complete()
             count_bid = count_bid + 1
+            log().info(f"Successfully participated. bid={bid}")
+            log().info(f"--------------------------------------------")
 
         log().info(f"Finish to process. market={market.name}")
         market.finish()

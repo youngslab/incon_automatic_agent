@@ -12,3 +12,5 @@ opencv-python
 
 prettytable
 slack_sdk
+html5lib
+beautifulsoup4
