@@ -9,27 +9,24 @@ import automatic as am
 import automatic.selenium as s
 import automatic.win32 as w
 from automatic.selenium.utils import create_driver
-from automatic.utils.logger import Logger
 
-from org.g2b.res import resmgr
+LOGGER_D2B = "D2B"
+logger = logging.getLogger(LOGGER_D2B)
 
 
 class D2B(am.Automatic):
     
-    def __init__(self, driver, id, pw, cert_pw, loglevel=logging.INFO):
+    def __init__(self, driver, id, pw, cert_pw):
         self.__pw = pw
         self.__id = id
         self.__cert_pw = cert_pw
-
-        Logger.init("D2B", loglevel)
-        self.logger = Logger.get("D2B")
 
         selenium = s.Context(driver, timeout=20, differ=0)
         win32 = w.Context(timeout=50, differ=0)
         am.Automatic.__init__(self, [selenium, win32])
 
     def login(self):
-        self.logger.info("로그인")
+        logger.info("로그인")
         try:
             self.go(s.Url("로그인 페이지", "https://www.d2b.go.kr/index.do"))
              # 이전상태에 따라 popup이 생성되는 경우가 있다. 
@@ -37,7 +34,7 @@ class D2B(am.Automatic):
                 self.accept(s.Alert("test", ""))
 
             if self.exist(s.Id("로그아웃 버튼", "_logoutBtn", timeout=3)):
-                self.logger.info("이미 로그인 되어 있습니다.")
+                logger.info("이미 로그인 되어 있습니다.")
                 return True
             
             self.click(s.Id("로그인 버튼","_mLogin"))
@@ -47,26 +44,26 @@ class D2B(am.Automatic):
             # TODO: 적절한 수준 찾기
             # 3초: 가끔씩 메세지가 나오는 경우가 있다.
             # 5초로 변경
-            self.logger.info("Wait 5 secs. Too fast to login make problem.")
+            logger.info("Wait 5 secs. Too fast to login make problem.")
             time.sleep(5)
 
-            self.logger.info("로그인 - 아이디 패스워드 입력")
+            logger.info("로그인 - 아이디 패스워드 입력")
             self.type(s.Id("아이디 입력상자", "_id"), self.__id)
             self.type(s.Id("패스워드 입력상자", "_pw"), self.__pw)
             self.click(s.Id("로그인 버튼", "_loginBtn"))
-            self.logger.info("로그인 - 인증서")
+            logger.info("로그인 - 인증서")
             self.type(s.Id("인증서 비밀번호 입력상자", "certPwd"), self.__cert_pw)
             self.click(s.Xpath("인증서 선택 확인 버튼", '//*[@id="nx-cert-select"]/div[4]/button[1]'))
 
             # validate login is completed
             if self.exist(s.Id("로그인 버튼","_mLogin", timeout=3, differ=10)):
-                self.logger.info("로그인 버튼이 아직 있습니다. 로그인 실패로 간주합니다.")
+                logger.info("로그인 버튼이 아직 있습니다. 로그인 실패로 간주합니다.")
                 return False
             
             return True
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return False
         
 
@@ -94,7 +91,7 @@ class D2B(am.Automatic):
         self.click(s.Xpath("검색결과 참여링크", '//*[@id="datagrid1_1_7_data"]/span/a', differ=1))
         
     def register(self, code):
-        self.logger.info(f"사전등록: {code}")
+        logger.info(f"사전등록: {code}")
         try:
             self.go_detail_page(code)
 
@@ -108,36 +105,36 @@ class D2B(am.Automatic):
             # popup message: 해당 선택하신 건은 이미 입찰참가등록이 신청 완료된 건입니다. 해당건의 진행상태를 확인하세요.
             alert = s.Alert("입찰참여 완료 팝업", "입찰참가등록이 신청 완료된 건입니다.", timeout=3)
             if self.exist(alert):
-                self.logger.info("이미 참여하였습니다.")
+                logger.info("이미 참여하였습니다.")
                 self.accept(alert)
                 return True
             
             time.sleep(2)
-            self.logger.info("서약서 작성")
+            logger.info("서약서 작성")
             self.click(s.Id("서약서 체크박스",'c_box1'))
             self.click(s.Id("서약서 체크박스",'c_box2'))
             self.click(s.Id("수의계약각서 체크박스",'c_box3') )
             self.click(s.Id("하도급 대금의 지급관련 확인 및 확약서",'subcont_dir_pay_yn1'))
             self.click(s.Id("확인 버튼",'btn_confirm'))
 
-            self.logger.info("보증금납부 방법")
+            logger.info("보증금납부 방법")
 
             self.select(s.Id("보증금 납부방법 선택", 'grnt_mthd'), '보증금면제')
             
             # 보증금납부에 대한 서약서 확인
-            self.logger.info("보증금 동의문")
+            logger.info("보증금 동의문")
             self.click(s.Id("입찰보증금 지급확약서", 'c_box2'))
             self.click(s.Id("입찰보증금 면제사유 확약서", 'c_box3'))
             self.click(s.Xpath("확인버튼",'//div[5]/div[2]/div[2]/div/div/div[3]/button[1]'))
 
             # 약관 동의 체크
-            self.logger.info("약관 동의 체크")
+            logger.info("약관 동의 체크")
             self.click(s.Id("약관 동의", 'bidAttention_check'))
             self.click(s.Id("신청 버튼", 'btn_wrt'))
 
             self.accept(s.Alert("",""))
 
-            self.logger.info("인증서 로그인(사업자)")
+            logger.info("인증서 로그인(사업자)")
             self.certificate("사업자")
 
             # 팝업 확인
@@ -150,26 +147,26 @@ class D2B(am.Automatic):
             return True
         
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return False
         
     def __participate_without_registration(self, code, cost):
         
-        self.logger.info("사전등록이 필요없는 입찰 참가 시작")
+        logger.info("사전등록이 필요없는 입찰 참가 시작")
 
         self.go_detail_page(code)
 
         if self.exist(s.Id("견적서조회버튼", 'btn_estimate_inquiry', timeout=3)):
-            self.logger.info("이미 참여하였습니다.")
+            logger.info("이미 참여하였습니다.")
             return True
         
         self.click(s.Xpath('견적서작성버튼', '//button[@id="btn_estimate_write"]'))
 
-        self.logger.info("서약서 작성")
+        logger.info("서약서 작성")
         self.clicks(s.Xpath("서약서 체크박스", '//input[@type="checkbox" and @name="a1"]', differ=1))
         self.click(s.Id("확인버튼", 'btn_oath_confirm', differ=5))
 
-        self.logger.info("견적서 작성")
+        logger.info("견적서 작성")
         self.type(s.Id("견적금액 작성", "input_amount"), cost)
 
         # 사업자 등록증 제출
@@ -189,7 +186,7 @@ class D2B(am.Automatic):
         self.click(s.Id("제출 버튼", "btn_submit"))
         self.accept(s.Alert("견적서 제출 확인 팝업", ""))
 
-        self.logger.info("지문인식 예외입찰 확인")
+        logger.info("지문인식 예외입찰 확인")
         self.click(s.Id("지문인식 예외입찰 버튼", "btn_bio_excp"))
         self.certificate("은행")
         self.accept(s.Alert("견적서 제출 확인 팝업", "견적서를 성공적으로  제출하였습니다.", timeout=20))
@@ -217,26 +214,26 @@ class D2B(am.Automatic):
         return pd.concat(tables, ignore_index=True)
 
     def participate_with_registration(self, code, cost):
-        self.logger.info("사전등록이 완료된 입찰 참가 시작")
+        logger.info("사전등록이 완료된 입찰 참가 시작")
 
         # 사전등록이 되어 있는지 검증.
-        self.logger.warning("참가신청서 검색.")
+        logger.warning("참가신청서 검색.")
         regs = self.get_pre_registration_table()
         row = regs[(regs[0].notna()) & (regs[0].str.contains(code))]
         if row.empty:
-            self.logger.warning("검색된 참가신청서가 없습니다.")
+            logger.warning("검색된 참가신청서가 없습니다.")
             column_values = ', '.join(row[0].astype(str).tolist())
-            self.logger.info(f"0번째 컬럼의 내용: {column_values}")
+            logger.info(f"0번째 컬럼의 내용: {column_values}")
             return False
         
         status = str(row.iloc[0,5])
-        self.logger.info(f"참가신청서 상태: {status}")
+        logger.info(f"참가신청서 상태: {status}")
         if "제출" == status:
-            self.logger.info("이미 투찰이 완료되었습니다.")
+            logger.info("이미 투찰이 완료되었습니다.")
             return True
         
         elif "미제출" != status:
-            self.logger.error(f"알수 없는 상태입니다. - {row.iloc[0,5]}")
+            logger.error(f"알수 없는 상태입니다. - {row.iloc[0,5]}")
             return False
         
         # TODO: 입찰서 진행 상태 확인..
@@ -272,7 +269,7 @@ class D2B(am.Automatic):
         # 소수점이 있을 경우 입력이 불가하다고 안내한다. 
         cost = int(float(cost))
 
-        self.logger.info(f"입찰참여: code={code}, cost={cost}")
+        logger.info(f"입찰참여: code={code}, cost={cost}")
         try:
             
             # 견적서작성 버튼이 있으면 입찰참가가 필요 없다.
@@ -284,6 +281,6 @@ class D2B(am.Automatic):
                 return self.participate_with_registration(code, cost)
             
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             traceback.print_exc()
             return False

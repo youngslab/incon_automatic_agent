@@ -5,8 +5,9 @@ import automatic as am
 import automatic.selenium as s
 import logging
 import pandas as pd
-import numpy as np
-import re
+
+LOGGER_INCON = "Incon"
+logger = logging.getLogger(LOGGER_INCON)
 
 class Callbacks():
     def __init__(self, complete):
@@ -63,16 +64,16 @@ class Preregistration:
 
 # New Incon MRO mall
 class InconMRO(am.Automatic):
-    def __init__(self, driver, id, pw, loglevel=logging.DEBUG):
+    def __init__(self, driver, id, pw):
         self.id = id
         self.pw = pw
         selenium = s.Context(driver, timeout=10, differ=0)
         am.Automatic.__init__(self, [selenium])
-        self.logger = logging.getLogger("Incon")
+    
 
 
     def login(self):
-        self.logger.info("로그인")
+        logger.info("로그인")
         try:
             self.go(s.Url("홈페이지", "https://www.incon-mro.com/bbs/login.php?url=%2F"))
             self.type(s.Id("아이디 입력 상자", "login_id"), self.id)
@@ -83,12 +84,12 @@ class InconMRO(am.Automatic):
             self.attandance_event()
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             traceback.print_exc()
             return False
 
     def init_pre(self):
-        self.logger.info("전체 소싱 요청")
+        logger.info("전체 소싱 요청")
         try:
             self.go(
                 s.Url("소싱요청 페이지", "https://www.incon-mro.com/shop/sourcingrequestlist.php"))
@@ -102,11 +103,11 @@ class InconMRO(am.Automatic):
             return self.exist(s.Xpath("사전등록", "//a[text()='사전등록']"))
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return False
 
     def clean_pre_list(self, df: pd.DataFrame) -> pd.DataFrame:
-        self.logger.info("사전등록 데이터 클렌징")
+        logger.info("사전등록 데이터 클렌징")
         # 1. 직접의무대상 제거
         # df = df[~df.iloc[:, 2].str.contains('직접이행의무대상')]
         # 2. 취소 제거
@@ -128,7 +129,7 @@ class InconMRO(am.Automatic):
         return df
 
     def clean_bid_list(self, df: pd.DataFrame) -> pd.DataFrame:
-        self.logger.info("입찰 데이터 클렌징")
+        logger.info("입찰 데이터 클렌징")
         # Merge notice
         df['비고'] = df['견적서'].shift(-1)
         df = df[df['견적서'].isnull()].copy()
@@ -189,13 +190,13 @@ class InconMRO(am.Automatic):
 
 
     def get_pre_data_raw(self):
-        self.logger.info("사전 등록 데이터(raw format)")
+        logger.info("사전 등록 데이터(raw format)")
         try:
             dfs = []
             cnt = self.get_num_of_predata_page()
-            self.logger.debug(f"사전등록 페이지: {cnt}")
+            logger.debug(f"사전등록 페이지: {cnt}")
             for i in range(1, cnt+1):
-                self.logger.info(f"사전등록데이터 요청 - {i} page")
+                logger.info(f"사전등록데이터 요청 - {i} page")
                 self.go(
                     s.Url("사전등록 탭", f"https://www.incon-mro.com/shop/preregistrationlist.php?&page={i}"))
                 df = self.table(
@@ -205,20 +206,20 @@ class InconMRO(am.Automatic):
             return pd.concat(dfs, ignore_index=True)
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return None
 
     def get_pre_data(self):
-        self.logger.info("사전 등록 데이터 요청")
+        logger.info("사전 등록 데이터 요청")
         df = self.get_pre_data_raw()
         if df is None:
-            self.logger.info("사전 등록 데이터를 찾을 수 없습니다.")
+            logger.info("사전 등록 데이터를 찾을 수 없습니다.")
             return None
         df = self.clean_pre_list(df)
         return [Preregistration(d, lambda num: self.complete_pre(num)) for _, d in df.iterrows()]
     
     def init_bid(self):
-        self.logger.info("입찰 데이터 가격 산정")
+        logger.info("입찰 데이터 가격 산정")
         # 모든 page에 산정금액이 없는 데이터는 금액산정. 
         self.calculate_price_all()
 
@@ -230,7 +231,7 @@ class InconMRO(am.Automatic):
     def calculate_price_all(self):
         cnt = self.get_num_of_bid_page()
         for i in range(1, cnt+1):
-            self.logger.info(f"입찰 등록데이터 요청 - {i} page")
+            logger.info(f"입찰 등록데이터 요청 - {i} page")
             
             
             while True:
@@ -280,7 +281,7 @@ class InconMRO(am.Automatic):
         dfs = []
         cnt = self.get_num_of_bid_page()
         for i in range(1, cnt+1):
-            self.logger.info(f"입찰 등록데이터 요청 - {i} page")
+            logger.info(f"입찰 등록데이터 요청 - {i} page")
             self.go(
                 s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
             df = self.table(
@@ -291,7 +292,7 @@ class InconMRO(am.Automatic):
         return pd.concat(dfs, ignore_index=True)
 
     def get_bid_data(self):
-        self.logger.info("입찰 데이터 요청")
+        logger.info("입찰 데이터 요청")
         try:
             df = self.get_raw_bid_data()
             df = self.clean_bid_list(df)
@@ -299,14 +300,14 @@ class InconMRO(am.Automatic):
             # return [Preregistration(d, lambda num, p: self.complete_pre(num, p)) for _, d in df.iterrows()]
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             traceback.print_exc()
             return None
         
     # 더 이상 공고번호로 가격산정을 할 수 없음. 
     def calculate_price(self, num, page):
 
-        self.logger.info(f"가격산정 {num}, 페이지 {page}")
+        logger.info(f"가격산정 {num}, 페이지 {page}")
         self.go(
             s.Url("소싱완료탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={page}"))
         
@@ -338,7 +339,7 @@ class InconMRO(am.Automatic):
     def find_page_for_pre(self, num):
         cnt = self.get_num_of_predata_page()
         for i in range(1, cnt+1):
-            self.logger.info(f"입찰 등록데이터 페이지로 이동 - {i} page")
+            logger.info(f"입찰 등록데이터 페이지로 이동 - {i} page")
             self.go(
                 s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/preregistrationlist.php?&page={i}"))
             if self.exist(s.Xpath("공고명", f"//td[contains(.,'{num}')]", timeout=2)):
@@ -368,7 +369,7 @@ class InconMRO(am.Automatic):
     def find_page_for_bid(self, num):
         cnt = self.get_num_of_bid_page()
         for i in range(1, cnt+1):
-            self.logger.info(f"입찰 등록데이터 페이지로 이동 - {i} page")
+            logger.info(f"입찰 등록데이터 페이지로 이동 - {i} page")
             self.go(
                 s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/sourcingcompletelist.php?&page={i}"))
             if self.exist(s.Xpath("공고명", f"//td[contains(.,'{num}')]", timeout=2)):
@@ -383,7 +384,7 @@ class InconMRO(am.Automatic):
             # 페이지 보정 (순서가 변경되는 경우가 있어 공고의 페이지가 변경 되는 경우가 있음)
             if not self.exist(s.Xpath("공고명", f"//td[contains(.,'{num}')]", timeout=2)):
                 page = self.find_page_for_bid(num)
-                self.logger.info(f"페이지에서 입찰 공고를 찾을 수 없어 다른 페이지에서 공고를 찾았습니다. {page}")
+                logger.info(f"페이지에서 입찰 공고를 찾을 수 없어 다른 페이지에서 공고를 찾았습니다. {page}")
                 if not page:
                     raise Exception(f"입찰참여 완료를 위한 공고를 찾을 수 없습니다. - {num} at page {page}")
                 self.go(
@@ -395,6 +396,6 @@ class InconMRO(am.Automatic):
             self.accept(s.Alert("입찰참여 완료 안내 팝업", "아래와 같이 입찰참여완료가 진행됩니다."))
             
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             traceback.print_exc()
             return None

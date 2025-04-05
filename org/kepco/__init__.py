@@ -1,4 +1,4 @@
 
-from .kepco_v2 import Kepco
+from .kepco_v2 import *
 
 # from .kepco import Kepco

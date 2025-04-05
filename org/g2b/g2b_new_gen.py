@@ -6,24 +6,20 @@ import automatic.selenium as s
 import automatic.win32 as w
 from automatic.selenium.utils import create_driver
 
-
-from automatic.utils.logger import Logger
-
 import time
 import logging
 
+LOGGER_G2B = "G2B"
+logger = logging.getLogger(LOGGER_G2B)
 
 class G2B_new_gen(am.Automatic):
 
-    def __init__(self, driver, pw, id, cert_public, cert_finance, loglevel=logging.INFO):
+    def __init__(self, driver, pw, id, cert_public, cert_finance):
         self.__pw = pw
         self.__id = id
         self.__cert_public = cert_public
         self.__cert_finance = cert_finance
-
-        Logger.init("G2B", loglevel)
-        self.logger = Logger.get("G2B")
-
+        
         selenium = s.Context(driver, timeout=20, differ=0)
         win32 = w.Context(timeout=50, differ=0)
         am.Automatic.__init__(self, [selenium, win32])
@@ -31,9 +27,9 @@ class G2B_new_gen(am.Automatic):
     def login(self):
 
         # Step: 홈페이지로 이동
-        self.logger.info("로그인")
+        logger.info("로그인")
         try:
-            self.logger.info("홈페이지로 이동")
+            logger.info("홈페이지로 이동")
             self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
 
             # 팝업이 와전히 생성될 때까지 기다린다.
@@ -45,7 +41,7 @@ class G2B_new_gen(am.Automatic):
 
             logout_btn = s.Xpath("로그아웃버튼", "//span[text()='로그아웃']/../a", differ=5, timeout=5, clickable=True)
             if self.exist(logout_btn):
-                self.logger.info("이미 로그인 되었습니다.")
+                logger.info("이미 로그인 되었습니다.")
                 return True 
 
             login_btn = s.Id("로그인버튼", 'mf_wfm_gnb_wfm_gnbTop_btnLogin')
@@ -78,7 +74,7 @@ class G2B_new_gen(am.Automatic):
             return True
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return False
 
 
@@ -135,13 +131,13 @@ class G2B_new_gen(am.Automatic):
             return True
         
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return False
 
     def register(self, code):
         codes = code.split(",")
         codes = [pn.strip() for pn in codes]
-        self.logger.info(f"사전등록: {codes}")
+        logger.info(f"사전등록: {codes}")
         for code in codes:
             if not self.__register(code):
                 return False
@@ -154,7 +150,7 @@ class G2B_new_gen(am.Automatic):
         price = int(float(price))
 
         try:
-            self.logger.info("입찰 참가 페이지로 이동")
+            logger.info("입찰 참가 페이지로 이동")
             self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
             
             bid_btn = s.Xpath("입찰 버튼","//a[contains(@class, 'btn') and span[text()='입찰']]")
@@ -174,14 +170,14 @@ class G2B_new_gen(am.Automatic):
             self.click(participate_process_btn)
 
             if self.exist(s.Xpath("완료 버튼","//button[text()='완 료']", visible=False, differ=1, timeout=10)):
-                self.logger.info("이미 완료되었습니다.")
+                logger.info("이미 완료되었습니다.")
                 return True
 
             participate_btn = s.Xpath("투찰 버튼","//button[text()='투 찰']", visible=False, differ=1)
             self.click(participate_btn)
 
             # 인증
-            self.logger.info("금융인증")
+            logger.info("금융인증")
             certi_btn = s.Xpath("금융인증서", "//span[text()='금융인증서']/..",timeout=5)
             if self.exist(certi_btn):
                 self.click(certi_btn)
@@ -203,7 +199,7 @@ class G2B_new_gen(am.Automatic):
                 need_wait = False
                 if self.exist(first_access_elem):
                     need_wait = True
-                    self.logger.info("첫 번째 접속으로 금융인증서 셋업을 위한 사용자 액션이 필요합니다. 2분안에 작업을 완료하세요.")
+                    logger.info("첫 번째 접속으로 금융인증서 셋업을 위한 사용자 액션이 필요합니다. 2분안에 작업을 완료하세요.")
 
                 cert = s.Xpath("금융인증서", "//button[text()='인증이력']/..", parent=cert_srv_frame, timeout= 5 if not need_wait else 120)
                 self.click(cert)
@@ -294,5 +290,5 @@ class G2B_new_gen(am.Automatic):
             return True
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return False
