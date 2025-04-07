@@ -7,6 +7,8 @@ import time
 import traceback
 import logging
 import account
+from selenium.common.exceptions import WebDriverException
+
 
 from dotenv import load_dotenv
 
@@ -20,6 +22,7 @@ if pythonpath:
     absolute_paths = [os.path.abspath(path) for path in pythonpath.split(os.pathsep)]
     sys.path.extend(absolute_paths)
 
+from automatic.common.exceptions import ElementNotFoundException
 import org.d2b
 import org.kepco
 from org.markets import create_market
@@ -82,6 +85,15 @@ def get_reporter() -> SlackReporter:
     return _reporter_instance
 
 
+def is_driver_alive(driver):
+    if driver is None:
+        return False
+    try:
+        driver.execute_script("return 1;")
+        return True
+    except WebDriverException:
+        return False
+
 
 
 def main(target_markets):   
@@ -92,7 +104,7 @@ def main(target_markets):
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
     print_pres_summary(pres)
-    pres = [pre for pre in pres if not pre.is_completed]
+    # pres = [pre for pre in pres if not pre.is_completed]
 
     dp.init_bid()
     bids = dp.get_bid_data()
@@ -187,6 +199,40 @@ def main(target_markets):
     bids = dp.get_bid_data()
     reporter.send_message(f'```{to_agent_table(bids, ["is_completed", "market", "number", "price", "title"])}```')
 
+
+def handle_exception(e, *, driver=None, debug=False):
+    # 예외 상세 로그
+    exc_info = sys.exc_info()
+    if exc_info[0] is not None:
+        exception_str = ''.join(traceback.format_exception(*exc_info))
+        logger.error(f"An exception occurred:\n{exception_str}")
+    logger.error(e)
+
+    # 스크린샷 전송 (있을 경우)
+    if is_driver_alive(driver):
+        try:
+            screenshot_path = os.path.join(os.path.expanduser('~'), '.iaa', 'log', "error_screenshot.png")
+            if driver.save_screenshot(screenshot_path):
+                logger.info(f"Screenshot saved to {screenshot_path}")
+                get_reporter().send_file(screenshot_path, title="Screenshot", initial_comment="Check this screen.")
+            else:
+                logger.error(f"Failed to save screenshot.")
+        except Exception as screenshot_error:
+            logger.error(f"Failed to capture screenshot: {screenshot_error}")
+    else:
+        logger.error(f"Driver is not valid to save screenshot")
+
+    # 로그 파일 전송
+    flush_file_handler(loggers)
+    logger.info("Waiting for log file to be flushed...")
+    while not os.path.exists(log_path):
+        time.sleep(1)
+    get_reporter().send_file(log_path, title="Log File", initial_comment="Check this file.")
+
+    # 디버깅 대기
+    if debug:
+        input("Press any key to finish.")
+
 if __name__ == "__main__":
     # For debugging porpuse, Stop before finishing 
     parser = argparse.ArgumentParser(description="Debug option example")
@@ -211,21 +257,12 @@ if __name__ == "__main__":
     log_path = os.path.expanduser(log_path)
     setup_agent_logger(loggers, log_path)
 
+    logger.info(f"Argument: markets={args.markets}, debug={args.debug}")
+
     try:
         main(args.markets)
+    except ElementNotFoundException as e:
+        handle_exception(e, driver=e.driver)
+
     except Exception as e:
-        exc_info = sys.exc_info()
-        if exc_info[0] is not None:
-            exception_str = ''.join(traceback.format_exception(*exc_info))
-            logger.error(f"An exception occurred:\n {exception_str}", )
-        logger.error(e)
-
-        # flush logger
-        flush_file_handler(loggers)
-        print(f"wait {log_path}")
-        while not os.path.exists(log_path):
-            time.sleep(1)
-        get_reporter().send_file(log_path, title="log file", initial_comment="Check this file.")
-
-        if args.debug:
-            input("Press any keys to finish.")
+        handle_exception(e)

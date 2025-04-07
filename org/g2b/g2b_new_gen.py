@@ -80,7 +80,7 @@ class G2B_new_gen(am.Automatic):
 
     def __register(self, code):
         try:
-            logging.info("입찰 참가 페이지로 이동")
+            logger.info("입찰 참가 페이지로 이동")
             self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
 
             user_management_btn = s.Xpath("이용자관리 버튼","//a[contains(@class, 'btn') and span[text()='이용자관리']]", clickable=False)
