@@ -1,4 +1,3 @@
-
 import argparse
 from datetime import datetime
 import sys
@@ -6,6 +5,8 @@ import os
 import time
 import traceback
 import logging
+
+from traitlets import Bool
 import account
 from selenium.common.exceptions import WebDriverException
 
@@ -25,7 +26,7 @@ if pythonpath:
 from automatic.common.exceptions import ElementNotFoundException
 import org.d2b
 import org.kepco
-from org.markets import create_market
+from org.markets import MarketFactory, MarketType
 from org.incon import InconMRO
 from utils.logger import setup_agent_logger, flush_file_handler
 from utils import edge
@@ -96,7 +97,7 @@ def is_driver_alive(driver):
 
 
 
-def main(target_markets):   
+def main(target_markets, debug:Bool):   
     dp = create_data_provider()
     dp.login()
 
@@ -104,7 +105,7 @@ def main(target_markets):
     pres = dp.get_pre_data()
     pres = sorted(pres, key=lambda pre: pre.market)
     print_pres_summary(pres)
-    # pres = [pre for pre in pres if not pre.is_completed]
+    pres = [pre for pre in pres if not pre.is_completed]
 
     dp.init_bid()
     bids = dp.get_bid_data()
@@ -131,7 +132,8 @@ def main(target_markets):
     if len(target_markets) != 0:
         markets = [ market for market in markets if market in target_markets ]
     # filter for supported markets
-    markets = [create_market(market)
+    drv = edge.create_driver(headless=False if debug else True, profile="market")
+    markets = [MarketFactory.create(drv, market)
                 for market in markets if market not in _market_filter]
 
     markets = [market for market in markets if market is not None]
@@ -139,6 +141,8 @@ def main(target_markets):
     count_pre = 0
     count_bid = 0
 
+    failed_bid = []
+    failed_pre = []
 
     for market in markets:
         # filter not supported markets
@@ -149,10 +153,7 @@ def main(target_markets):
         logger.info(f"Start to process for a market({market.name})")
 
         # login first
-        if not market.login():
-            logger.warning(f"Failed to login to {market.name}")
-            continue
-
+        market.login()
 
         # register prebid
         for pre in pres:
@@ -160,11 +161,18 @@ def main(target_markets):
                 continue
             logger.info(f"--------------------------------------------")
             logger.info(f"Try to register. pre={pre}")
-            if not market.register(pre):
-                logger.warning(f"Failed to register. pre={pre}")
-                logger.info(f"--------------------------------------------")
-                continue
+            if isinstance(pre.number, list):
+                numbers = pre.number
+            else:
+                numbers = [pre.number]
 
+            for number in numbers:
+                if not market.register(number):
+                    logger.warning(f"Failed to register. pre={pre}")
+                    failed_pre.append(pre)
+                    logger.info(f"--------------------------------------------")
+                    continue
+                
             pre.complete()
             count_pre = count_pre + 1
             logger.info(f"Successfully registered. pre={pre}")
@@ -177,7 +185,7 @@ def main(target_markets):
 
             logger.info(f"--------------------------------------------")
             logger.info(f"Try to participate. bid={bid}")
-            if not market.participate(bid):
+            if not market.participate(bid.number, str(bid.price)):
                 logger.warning(f"Failed to participate. bid={bid}")
                 logger.info(f"--------------------------------------------")
                 continue
@@ -188,19 +196,25 @@ def main(target_markets):
             logger.info(f"--------------------------------------------")
 
         logger.info(f"Finish to process. market={market.name}")
-        market.finish()
 
     reporter = get_reporter()
     result = f"pre: {count_pre}/{len(pres)}, bid: {count_bid}/{len(bids)}"
     reporter.send_message(result)
     logger.info(result)
-    
+
     # update the lastest states
-    bids = dp.get_bid_data()
-    reporter.send_message(f'```{to_agent_table(bids, ["is_completed", "market", "number", "price", "title"])}```')
+    summary = dp.get_bid_data()
+    reporter.send_message(f'```{to_agent_table(summary, ["is_completed", "market", "number", "price", "title"])}```')
+
+    # report failed items
+    # logger.info("Failed itmes")
+    failed_pre = [pre.number for pre in failed_pre]
+    failed_bid = [bid.number for bid in failed_bid]
+    reporter.send_message(f"- failed pres: {failed_pre}")
+    reporter.send_message(f"- failed bids: {failed_bid}")
 
 
-def handle_exception(e, *, driver=None, debug=False):
+def handle_exception(e, *, context=None, debug=False):
     # 예외 상세 로그
     exc_info = sys.exc_info()
     if exc_info[0] is not None:
@@ -208,19 +222,16 @@ def handle_exception(e, *, driver=None, debug=False):
         logger.error(f"An exception occurred:\n{exception_str}")
     logger.error(e)
 
-    # 스크린샷 전송 (있을 경우)
-    if is_driver_alive(driver):
-        try:
-            screenshot_path = os.path.join(os.path.expanduser('~'), '.iaa', 'log', "error_screenshot.png")
-            if driver.save_screenshot(screenshot_path):
-                logger.info(f"Screenshot saved to {screenshot_path}")
-                get_reporter().send_file(screenshot_path, title="Screenshot", initial_comment="Check this screen.")
+    if context:
+        captured_files = context.capture()
+        if not isinstance(captured_files, list):
+            captured_files = [captured_files]
+
+        for file_path in captured_files:
+            if os.path.exists(file_path):
+                get_reporter().send_file(file_path, title="Captured File", initial_comment="Check this file.")
             else:
-                logger.error(f"Failed to save screenshot.")
-        except Exception as screenshot_error:
-            logger.error(f"Failed to capture screenshot: {screenshot_error}")
-    else:
-        logger.error(f"Driver is not valid to save screenshot")
+                logger.error(f"Captured file does not exist: {file_path}")
 
     # 로그 파일 전송
     flush_file_handler(loggers)
@@ -232,6 +243,13 @@ def handle_exception(e, *, driver=None, debug=False):
     # 디버깅 대기
     if debug:
         input("Press any key to finish.")
+
+def check_default_logger():
+    logger = logging.getLogger()
+    logger.info("Checking default logger configuration...")
+    logger.info(f"Default logger level: {logging.getLevelName(logger.level)}")
+    for handler in logger.handlers:
+        logger.info(f"Handler: {type(handler).__name__}, Level: {logging.getLevelName(handler.level)}")
 
 if __name__ == "__main__":
     # For debugging porpuse, Stop before finishing 
@@ -260,9 +278,9 @@ if __name__ == "__main__":
     logger.info(f"Argument: markets={args.markets}, debug={args.debug}")
 
     try:
-        main(args.markets)
+        main(args.markets, args.debug)
     except ElementNotFoundException as e:
-        handle_exception(e, driver=e.driver)
+        handle_exception(e, context=e.context)
 
     except Exception as e:
         handle_exception(e)

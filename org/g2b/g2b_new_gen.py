@@ -15,6 +15,7 @@ logger = logging.getLogger(LOGGER_G2B)
 class G2B_new_gen(am.Automatic):
 
     def __init__(self, driver, pw, id, cert_public, cert_finance):
+        self.name = "나라장터"
         self.__pw = pw
         self.__id = id
         self.__cert_public = cert_public
@@ -28,54 +29,53 @@ class G2B_new_gen(am.Automatic):
 
         # Step: 홈페이지로 이동
         logger.info("로그인")
-        try:
-            logger.info("홈페이지로 이동")
-            self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
 
-            # 팝업이 와전히 생성될 때까지 기다린다.
-            time.sleep(5)
-            
-            popup_close_btn = s.Xpath("팝업닫기", "//input[@title='오늘 하루 이 창을 열지 않음']", multiple=True, visible=False, differ=2)
-            if self.exist(popup_close_btn):
-                self.clicks(popup_close_btn)
+        logger.info("홈페이지로 이동")
+        self.go(s.Url("G2B 홈페이지", 'https://www.g2b.go.kr'))
 
-            logout_btn = s.Xpath("로그아웃버튼", "//span[text()='로그아웃']/../a", differ=5, timeout=5, clickable=True)
-            if self.exist(logout_btn):
-                logger.info("이미 로그인 되었습니다.")
-                return True 
+        # 팝업이 와전히 생성될 때까지 기다린다.
+        time.sleep(5)
+        
+        logger.info("팝업닫기")
+        popup_close_btn = s.Xpath("팝업닫기", "//input[@title='오늘 하루 이 창을 열지 않음']", multiple=True, visible=False, differ=2)
+        if self.exist(popup_close_btn):
+            self.clicks(popup_close_btn)
 
-            login_btn = s.Id("로그인버튼", 'mf_wfm_gnb_wfm_gnbTop_btnLogin')
-            if self.exist(login_btn):
-                self.clicks(login_btn) 
+        logger.info("로그인")
+        logout_btn = s.Xpath("로그아웃버튼", "//span[text()='로그아웃']/../a", differ=5, timeout=5, clickable=True)
+        if self.exist(logout_btn):
+            logger.info("이미 로그인 되었습니다.")
+            return True 
 
-            id_pw_tab = s.Xpath("아이디/암호 탭", "//a[text()='아이디/비밀번호']")
-            self.click(id_pw_tab)
+        login_btn = s.Id("로그인버튼", 'mf_wfm_gnb_wfm_gnbTop_btnLogin')
+        self.clicks(login_btn) 
 
-            id_input = s.Id("아이디입력상자", 'mf_wfm_container_tabLgn_contents_content4_body_ibxLgnId')
-            self.type(id_input, self.__id)
+        id_pw_tab = s.Xpath("아이디/암호 탭", "//a[text()='아이디/비밀번호']")
+        self.click(id_pw_tab)
 
-            pw_input = s.Id("암호입력상자", 'mf_wfm_container_tabLgn_contents_content4_body_ibxLgnPswd')
-            self.type(pw_input, self.__pw)
+        id_input = s.Id("아이디입력상자", 'mf_wfm_container_tabLgn_contents_content4_body_ibxLgnId')
+        self.type(id_input, self.__id)
 
-            login_btn = s.Id("로그인확인버튼", 'mf_wfm_container_tabLgn_contents_content4_body_btnLgn')
-            self.click(login_btn)
-            
-            # 다른세션에 로그인 되어 있다는 팝업이 뜰 수 있음. 
-            session_login_popup = s.Xpath("팝업확인", "//input[@value='예']")
-            if self.exist(session_login_popup):
-                self.click(session_login_popup)
+        pw_input = s.Id("암호입력상자", 'mf_wfm_container_tabLgn_contents_content4_body_ibxLgnPswd')
+        self.type(pw_input, self.__pw)
 
-            # 팝업들 열림 
-            # TODO: 각 popup 들의 scroll이 맨 아래로 내려가 있어야 함.
-            popup_close_btn = s.Xpath("팝업닫기", "//input[@title='오늘 하루 이 창을 열지 않음']",multiple=True, visible=False, differ=1)
-            if self.exist(popup_close_btn):
-                self.clicks(popup_close_btn)
+        login_btn = s.Id("로그인확인버튼", 'mf_wfm_container_tabLgn_contents_content4_body_btnLgn')
+        self.click(login_btn)
+        
+        logger.info("팝업닫기")
+        # 다른세션에 로그인 되어 있다는 팝업이 뜰 수 있음. 
+        session_login_popup = s.Xpath("팝업확인", "//input[@value='예']")
+        if self.exist(session_login_popup):
+            self.click(session_login_popup)
 
-            return True
+        # 팝업들 열림 
+        # TODO: 각 popup 들의 scroll이 맨 아래로 내려가 있어야 함.
+        popup_close_btn = s.Xpath("팝업닫기", "//input[@title='오늘 하루 이 창을 열지 않음']",multiple=True, visible=False, differ=1)
+        if self.exist(popup_close_btn):
+            self.clicks(popup_close_btn)
 
-        except Exception as e:
-            logger.error(e)
-            return False
+        return True
+
 
 
     def __register(self, code):

@@ -1,5 +1,5 @@
-
 import random
+from tkinter import W
 import traceback
 import automatic as am
 import automatic.selenium as s
@@ -347,15 +347,24 @@ class InconMRO(am.Automatic):
         return None
 
     def complete_pre(self, num):
-
-        page = self.find_page_for_pre(num)
-        if not page:
-            return False
-
-        # pre condition: should be in the pre-registration page
-        self.go(s.Url(
-            "사전등록 탭", f"https://www.incon-mro.com/shop/preregistrationlist.php?&page={page}"))
-
+        cnt = self.get_num_of_predata_page()
+        i = 0
+        for attempt in range(2):  # Retry up to 2 times
+            try:
+                for i in range(1, cnt+1):
+                    logger.info(f"입찰 등록데이터 페이지로 이동 - {i} page")
+                    self.go(
+                        s.Url("소싱완료 탭", f"https://www.incon-mro.com/shop/preregistrationlist.php?&page={i}"))
+                    if self.exist(s.Xpath("공고명", f"//td[contains(.,'{num}')]", timeout=2)):
+                        logger.info(f"입찰 등록데이터 {num} 찾음 - {i} page")
+                        break
+                else:
+                    raise Exception("공고명을 찾을 수 없습니다.")  # Raise exception if not found
+                break  # Exit retry loop if successful
+            except Exception as e:
+                logger.warning(f"시도 {attempt + 1}/2 실패: {e}")
+                if attempt == 1:  # If last attempt fails, re-raise the exception
+                    raise
         # NOTE:
         # text() -> .
         # 열이 다른 항목은 text()[1] 혹은 text()[2] 와 같이 접근해야 한다.

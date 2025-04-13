@@ -17,6 +17,7 @@ logger = logging.getLogger(LOGGER_D2B)
 class D2B(am.Automatic):
     
     def __init__(self, driver, id, pw, cert_pw):
+        self.name = "국방전자조달"
         self.__pw = pw
         self.__id = id
         self.__cert_pw = cert_pw

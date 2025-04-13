@@ -1,24 +1,27 @@
-
-
 import os
 import automatic as am
 import automatic.selenium as s
 import automatic.win32 as w
 import time
 import logging
+from datetime import datetime
 
 LOGGER_KEPCO = "Kepco"
 logger = logging.getLogger(LOGGER_KEPCO)
 
 class Kepco(am.Automatic):
     def __init__(self, driver, id,  pw, certpw):
+        self.name = "한국전력"
+
+        self.__driver = driver
         self.__pw = pw
         self.__id = id
         self.__certpw = certpw
 
-        selenium = s.Context(driver, timeout=20, differ=0)
+        self.__selenium_context = s.Context(driver, timeout=20, differ=0)
         win32 = w.Context(timeout=50, differ=0)
-        am.Automatic.__init__(self, [selenium, win32])
+        am.Automatic.__init__(self, [self.__selenium_context, win32])
+        
 
     def is_logged_in(self, timeout=10):
         return self.exist(s.Xpath("로그아웃버튼", "//span[text()='로그아웃']", timeout=timeout))
@@ -118,7 +121,11 @@ class Kepco(am.Automatic):
         # TODO: 한글입력이 안됨. 
         logger.info("중소기업확인서 첨부")
         filepath = os.path.join(os.path.expanduser("~"), ".iaa", "small_business_confirmation.pdf")
-        self.attach_file(filepath)
+        
+        file_input = s.Xpath("파일첨부 상자", '//input[@type="file" and not(@disabled)]', visible=False)
+        self.type(file_input, filepath)
+
+        # self.attach_file(filepath)
 
         logger.info("약정들에 동의") 
         check_boxes = s.Xpath("체크박스", '//div/div[not(contains(@style,"display: none"))]/div[3]/div/div/div[2]/div/div/input', differ=1, multiple=True)
@@ -137,6 +144,17 @@ class Kepco(am.Automatic):
         # certificate
         logger.info("인증서 제출")
         fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@src,"kica/kepco/kicaCert.jsp")]')
+        if not self.exist(fCert):
+            logger.info("인증서 로그인 프레임이 없습니다.")
+            
+            # 현재 시간 기반 파일 이름 생성
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_filename = f"kepco_{timestamp}"
+            
+            # DOM과 스크린샷 캡처
+            self.__selenium_context.capture(base_filename=base_filename)
+            return False
+        
         self.certificate("사업자", fCert)
 
         # 제출하였습니다. 
@@ -262,7 +280,7 @@ class Kepco(am.Automatic):
         logger.info("추첨번호 선택")
         self.clicks(s.Xpath("추첨번호 버튼", '//span[contains(text(),"예정가격추첨갯수")]/../../div/div/table/tbody/tr/td/a/span/span/span[2]', differ=1), num_samples=4)
         
-        logger.info(f"가격입력 f{cost}")
+        logger.info(f"가격입력 {cost}")
         # self.type(s.Xpath("가격입력", '//span[text()="숫자"]/../../div/div/table/tbody/tr/td[1]/div[1]/div/div/div[2]/input', timeout=1, visible=False), cost)
         # td[1] -> td 변경: 어떤 input(부가가치세 포함 따위의 글자가 추가됨)의 위치가 다르다. 기존 구조와 동일한지 검증해 보자.
         self.type(s.Xpath("가격입력", '//span[text()="숫자"]/../../div/div/table/tbody/tr/td/div[1]/div/div/div[2]/input', timeout=1, visible=False), cost)
@@ -280,4 +298,3 @@ class Kepco(am.Automatic):
         self.certificate("사업자", fCert)
         self.close_messagebox("확인", timeout=5) # message box - 제출되었습니다.
         return True
-        
