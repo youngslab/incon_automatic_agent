@@ -174,7 +174,6 @@ def main(target_markets, debug:Bool):
                     continue
                 
             pre.complete()
-            count_pre = count_pre + 1
             logger.info(f"Successfully registered. pre={pre}")
             logger.info(f"--------------------------------------------")
 
@@ -186,32 +185,33 @@ def main(target_markets, debug:Bool):
             logger.info(f"--------------------------------------------")
             logger.info(f"Try to participate. bid={bid}")
             if not market.participate(bid.number, str(bid.price)):
+                failed_bid.append(bid)
                 logger.warning(f"Failed to participate. bid={bid}")
                 logger.info(f"--------------------------------------------")
                 continue
             
             bid.complete()
-            count_bid = count_bid + 1
             logger.info(f"Successfully participated. bid={bid}")
             logger.info(f"--------------------------------------------")
 
         logger.info(f"Finish to process. market={market.name}")
 
-    reporter = get_reporter()
-    result = f"pre: {count_pre}/{len(pres)}, bid: {count_bid}/{len(bids)}"
-    reporter.send_message(result)
-    logger.info(result)
-
+    
     # update the lastest states
     summary = dp.get_bid_data()
-    reporter.send_message(f'```{to_agent_table(summary, ["is_completed", "market", "number", "price", "title"])}```')
+    bids_numbers = set(bid.number for bid in bids)  # participate를 시도한 bid 번호
+    failed_bid_numbers = set(bid.number for bid in failed_bid)
+    for bid in summary:
+        if bid.number in bids_numbers:
+            if bid.number in failed_bid_numbers:
+                bid.status = 'x'
+            else:
+                bid.status = 'o'
+        else:
+            bid.status = '-'
 
-    # report failed items
-    # logger.info("Failed itmes")
-    failed_pre = [pre.number for pre in failed_pre]
-    failed_bid = [bid.number for bid in failed_bid]
-    reporter.send_message(f"- failed pres: {failed_pre}")
-    reporter.send_message(f"- failed bids: {failed_bid}")
+    reporter = get_reporter()
+    reporter.send_message(f'```{to_agent_table(summary, ["is_completed", "status", "market", "number", "price", "title"])}```')
 
 
 def handle_exception(e, *, context=None, debug=False):
@@ -224,9 +224,6 @@ def handle_exception(e, *, context=None, debug=False):
 
     if context:
         captured_files = context.capture()
-        if not isinstance(captured_files, list):
-            captured_files = [captured_files]
-
         for file_path in captured_files:
             if os.path.exists(file_path):
                 get_reporter().send_file(file_path, title="Captured File", initial_comment="Check this file.")
@@ -255,7 +252,7 @@ if __name__ == "__main__":
     # For debugging porpuse, Stop before finishing 
     parser = argparse.ArgumentParser(description="Debug option example")
     parser.add_argument('--debug', action='store_true', help="Enable debug mode")
-    parser.add_argument("--markets", nargs="+", help="List of markets", default=[])
+    parser.add_argument("--markets", nargs="+", help="List of markets (ex. 한국전력, 국방전자조달, 나라장터)", default=[])
     args = parser.parse_args()
 
     # setup reporter

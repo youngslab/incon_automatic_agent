@@ -84,11 +84,18 @@ class D2B(am.Automatic):
     def go_detail_page(self, code):
         self.go(s.Url("홈페이지", 'https://www.d2b.go.kr/index.do'))
 
+        # 2개가 검색되는 경우가 있음. 판단번호가 유일하지만 .. "수의"라는 단어가 중요하기 때문에 사용할 수 없음. 
+        # 따라서 전체 공고에서 검색하는 것이 아니라. "용역" 과 "물품" 에서만 공고를 검색한다. 
+        self.click(s.Id("물품 체크박스", "pgb"))
+        self.click(s.Id("용역 체크박스", "psb"))
+
+
         self.type(s.Id("코드 검색 입력 상자", "numb_divs"), code)
         self.click(s.Id("검색 버튼",'btn_search'))
         
         # 검색된 결과 중 첫번째 element를 선택한다. 그런데 바로 클릭하게 되면 다음으로 넘어가지 않는다. 
         # table = self.table(s.Xpath("검색 결과 테이블", '//table[@id="SBHE_DATAGRID_WHOLE_TABLE_datagrid1"]', timeout=30))
+       
         self.click(s.Xpath("검색결과 참여링크", '//*[@id="datagrid1_1_7_data"]/span/a', differ=1))
         
     def register(self, code):
@@ -171,14 +178,10 @@ class D2B(am.Automatic):
         self.type(s.Id("견적금액 작성", "input_amount"), cost)
 
         # 사업자 등록증 제출
+         
         filepath = os.path.join(os.path.expanduser("~"), ".iaa", "business_regstration_certificate.zip")
-        self.click(s.Id("파일첨부버튼", "input_file_basic1"))
-        wFileAttach = w.Title("파일첨부 다이얼로그","[TITLE:열기; CLASS:#32770]")
-        self.type(w.Control("파일입력상자", "Edit1", parent=wFileAttach, differ=3), f"\"{filepath}\"")
-        # TODO: button이 한개 더 있음.. 버튼의 이름을 통해 확인을 하는 것이 좋을 것 같다. 
-        self.click(w.Control("확인 버튼", "Button2", parent=wFileAttach, differ=5))
-
-
+        self.type(s.Id("파일첨부버튼", "input_file_basic1"), filepath)
+        
         self.clicks(
             s.Xpath("복수예비가격 선택", '//input[@name="check_multi_price"]'), num_samples=2)
 

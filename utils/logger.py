@@ -4,9 +4,6 @@ import os
 import json
 from datetime import datetime, timedelta
 import logging
-import logging.config
-import traceback
-
 
 # StreamHandler 설정 함수
 def setup_stream_handler(formatter, level, loggers):
