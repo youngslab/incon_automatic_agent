@@ -143,18 +143,7 @@ class Kepco(am.Automatic):
 
         # certificate
         logger.info("인증서 제출")
-        fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@src,"kica/kepco/kicaCert.jsp")]')
-        if not self.exist(fCert):
-            logger.info("인증서 로그인 프레임이 없습니다.")
-            
-            # 현재 시간 기반 파일 이름 생성
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            base_filename = f"kepco_{timestamp}"
-            
-            # DOM과 스크린샷 캡처
-            self.__selenium_context.capture(base_filename=base_filename)
-            return False
-        
+        fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@src,"kica/kepco/kicaCert.jsp")]')        
         self.certificate("사업자", fCert)
 
         # 제출하였습니다. 

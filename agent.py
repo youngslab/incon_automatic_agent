@@ -42,9 +42,9 @@ _market_filter = [
     # '나라장터(직접이행)',
 ]
 
-def create_data_provider():
+def create_data_provider(debug:Bool, proxy:str=None) -> InconMRO:
     # create incon object
-    driver = edge.create_driver()
+    driver = edge.create_driver(headless=False if debug else True, proxy=proxy, profile="incon")
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
     return InconMRO(driver, id, pw)
@@ -97,8 +97,8 @@ def is_driver_alive(driver):
 
 
 
-def main(target_markets, debug:Bool):   
-    dp = create_data_provider()
+def main(target_markets, debug:Bool, proxy:str=None):   
+    dp = create_data_provider(debug, proxy)
     dp.login()
 
     dp.init_pre()
@@ -132,7 +132,7 @@ def main(target_markets, debug:Bool):
     if len(target_markets) != 0:
         markets = [ market for market in markets if market in target_markets ]
     # filter for supported markets
-    drv = edge.create_driver(headless=False if debug else True, profile="market")
+    drv = edge.create_driver(headless=False if debug else True, profile="market", proxy=proxy)
     markets = [MarketFactory.create(drv, market)
                 for market in markets if market not in _market_filter]
 
@@ -253,6 +253,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Debug option example")
     parser.add_argument('--debug', action='store_true', help="Enable debug mode")
     parser.add_argument("--markets", nargs="+", help="List of markets (ex. 한국전력, 국방전자조달, 나라장터)", default=[])
+    parser.add_argument("--proxy", type=str, help="Proxy server (ex. 123.45.67.89:8080)", default=os.getenv("HTTP_PROXY"))
     args = parser.parse_args()
 
     # setup reporter
@@ -272,10 +273,10 @@ if __name__ == "__main__":
     log_path = os.path.expanduser(log_path)
     setup_agent_logger(loggers, log_path)
 
-    logger.info(f"Argument: markets={args.markets}, debug={args.debug}")
+    logger.info(f"Argument: markets={args.markets}, debug={args.debug}, proxy={args.proxy}")
 
     try:
-        main(args.markets, args.debug)
+        main(args.markets, args.debug, args.proxy)
     except ElementNotFoundException as e:
         handle_exception(e, context=e.context)
 
