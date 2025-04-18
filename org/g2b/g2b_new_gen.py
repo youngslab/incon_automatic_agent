@@ -1,4 +1,3 @@
-
 import os
 import threading
 
@@ -15,13 +14,16 @@ logger = logging.getLogger(LOGGER_G2B)
 
 class G2B_new_gen(am.Automatic):
 
-    def __init__(self, driver, pw, id, cert_public, cert_finance):
+    def __init__(self, driver, pw, id, cert_public, cert_finance, name, phone, birth):
         self.name = "나라장터"
         self.__pw = pw
         self.__id = id
         self.__cert_public = cert_public
         self.__cert_finance = cert_finance
         self.__driver = driver
+        self.__name = name
+        self.__phone = phone
+        self.__birth = birth
         
         selenium = s.Context(driver, timeout=20, differ=0)
         win32 = w.Context(timeout=50, differ=0)
@@ -203,9 +205,9 @@ class G2B_new_gen(am.Automatic):
                     screenshot_path = os.path.join(os.path.expanduser("~"), ".iaa", "log", "cert_error.png")
                     self.__driver.save_screenshot(screenshot_path)
                     logger.info("첫 번째 접속으로 금융인증서 셋업을 위한 사용자 액션이 필요합니다. 2분안에 작업을 완료하세요.")
-                    self.type(s.Id("이름","CLOUD_ID_1",parent=cert_srv_frame), "박재영")
-                    self.type(s.Id("전화번호","CLOUD_ID_2",parent=cert_srv_frame), "01031084585")
-                    self.type(s.Id("생년월일","CLOUD_ID_3",parent=cert_srv_frame), "19831119")
+                    self.type(s.Id("이름","CLOUD_ID_1",parent=cert_srv_frame), self.__name)
+                    self.type(s.Id("전화번호","CLOUD_ID_2",parent=cert_srv_frame), self.__phone)
+                    self.type(s.Id("생년월일","CLOUD_ID_3",parent=cert_srv_frame), self.__birth)
                     self.click(s.Xpath("자동로그인","//span[text()='자동로그인']",parent=cert_srv_frame))
                     self.click(s.Xpath("문자인증", "//button[@title='휴대폰 문자인증']",parent=cert_srv_frame))
                     cert_code = self.text(s.Xpath("코드값", "//div[@class='code_confirm_number']",parent=cert_srv_frame))
@@ -306,3 +308,4 @@ class G2B_new_gen(am.Automatic):
         except Exception as e:
             logger.error(e)
             return False
+``` 

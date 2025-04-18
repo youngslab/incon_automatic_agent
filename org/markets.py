@@ -53,7 +53,11 @@ class MarketFactory:
             public_cert = account_get("g2b", "public_cert")
             # 금융인증서서
             financial_cert = account_get("g2b", "financial_cert")
-            return G2B_new_gen(drv, g2b_pw, g2b_id, public_cert, financial_cert)
+            # 이름, 전화번호, 생년월일 추가
+            g2b_name = account_get("g2b", "name")
+            g2b_phone = account_get("g2b", "phone")
+            g2b_birth = account_get("g2b", "birth")
+            return G2B_new_gen(drv, g2b_pw, g2b_id, public_cert, financial_cert, g2b_name, g2b_phone, g2b_birth)
 
         if market == MarketType.D2B:
             d2b_id = account_get("d2b", "id")
