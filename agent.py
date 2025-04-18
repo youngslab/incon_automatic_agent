@@ -42,9 +42,9 @@ _market_filter = [
     # '나라장터(직접이행)',
 ]
 
-def create_data_provider(debug:Bool, proxy:str=None) -> InconMRO:
+def create_data_provider(debug:Bool, proxy:str=None, user_agent:str=None) -> InconMRO:
     # create incon object
-    driver = edge.create_driver(headless=False if debug else True, proxy=proxy, profile="incon")
+    driver = edge.create_driver(headless=False if debug else True, proxy=proxy, profile="incon", user_agent=user_agent)
     id = account_get("incon", "id")
     pw = account_get("incon", "pw")
     return InconMRO(driver, id, pw)
@@ -97,8 +97,8 @@ def is_driver_alive(driver):
 
 
 
-def main(target_markets, debug:Bool, proxy:str=None):   
-    dp = create_data_provider(debug, proxy)
+def main(target_markets, debug:Bool, proxy:str=None, user_agent:str=None):   
+    dp = create_data_provider(debug, proxy, user_agent=user_agent)
     dp.login()
 
     dp.init_pre()
@@ -132,7 +132,7 @@ def main(target_markets, debug:Bool, proxy:str=None):
     if len(target_markets) != 0:
         markets = [ market for market in markets if market in target_markets ]
     # filter for supported markets
-    drv = edge.create_driver(headless=False if debug else True, profile="market", proxy=proxy)
+    drv = edge.create_driver(headless=False if debug else True, profile="market", proxy=proxy, user_agent=user_agent)
     markets = [MarketFactory.create(drv, market)
                 for market in markets if market not in _market_filter]
 
@@ -184,7 +184,8 @@ def main(target_markets, debug:Bool, proxy:str=None):
 
             logger.info(f"--------------------------------------------")
             logger.info(f"Try to participate. bid={bid}")
-            if not market.participate(bid.number, str(bid.price)):
+            number = bid.number if bid.market != "국방전자조달" else bid.judge_num
+            if not market.participate(number, str(bid.price)):
                 failed_bid.append(bid)
                 logger.warning(f"Failed to participate. bid={bid}")
                 logger.info(f"--------------------------------------------")
@@ -254,6 +255,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action='store_true', help="Enable debug mode")
     parser.add_argument("--markets", nargs="+", help="List of markets (ex. 한국전력, 국방전자조달, 나라장터)", default=[])
     parser.add_argument("--proxy", type=str, help="Proxy server (ex. 123.45.67.89:8080)", default=os.getenv("HTTP_PROXY"))
+    parser.add_argument("--user-agent", type=str, help="Custom User-Agent string", default=None)
     args = parser.parse_args()
 
     # setup reporter
@@ -276,7 +278,7 @@ if __name__ == "__main__":
     logger.info(f"Argument: markets={args.markets}, debug={args.debug}, proxy={args.proxy}")
 
     try:
-        main(args.markets, args.debug, args.proxy)
+        main(args.markets, args.debug, args.proxy, args.user_agent)
     except ElementNotFoundException as e:
         handle_exception(e, context=e.context)
 

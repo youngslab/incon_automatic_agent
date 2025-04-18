@@ -28,46 +28,39 @@ class D2B(am.Automatic):
 
     def login(self):
         logger.info("로그인")
-        try:
-            self.go(s.Url("로그인 페이지", "https://www.d2b.go.kr/index.do"))
-             # 이전상태에 따라 popup이 생성되는 경우가 있다. 
-            if self.exist(s.Alert("test", "", timeout=3)):
-                self.accept(s.Alert("test", ""))
+    
+        self.go(s.Url("로그인 페이지", "https://www.d2b.go.kr/index.do"))
+            # 이전상태에 따라 popup이 생성되는 경우가 있다. 
+        if self.exist(s.Alert("test", "", timeout=3)):
+            self.accept(s.Alert("test", ""))
 
-            if self.exist(s.Id("로그아웃 버튼", "_logoutBtn", timeout=3)):
-                logger.info("이미 로그인 되어 있습니다.")
-                return True
-            
-            self.click(s.Id("로그인 버튼","_mLogin"))
+        if self.exist(s.Id("로그아웃 버튼", "_logoutBtn", timeout=3)):
+            logger.info("이미 로그인 되어 있습니다.")
+            return
         
-            # XXX: 너무 빨리 click이 되면 문제가 발생한다.
-            #       인증 프로그램 실행 준비가 안되었습니다. 설치가 안된 경우 제품을 설치 후 진행해 주시기 바랍니다
-            # TODO: 적절한 수준 찾기
-            # 3초: 가끔씩 메세지가 나오는 경우가 있다.
-            # 5초로 변경
-            logger.info("Wait 5 secs. Too fast to login make problem.")
-            time.sleep(5)
+        self.click(s.Id("로그인 버튼","_mLogin"))
+    
+        # XXX: 너무 빨리 click이 되면 문제가 발생한다.
+        #       인증 프로그램 실행 준비가 안되었습니다. 설치가 안된 경우 제품을 설치 후 진행해 주시기 바랍니다
+        # TODO: 적절한 수준 찾기
+        # 3초: 가끔씩 메세지가 나오는 경우가 있다.
+        # 5초로 변경
+        logger.info("Wait 5 secs. Too fast to login make problem.")
+        time.sleep(5)
 
-            logger.info("로그인 - 아이디 패스워드 입력")
-            self.type(s.Id("아이디 입력상자", "_id"), self.__id)
-            self.type(s.Id("패스워드 입력상자", "_pw"), self.__pw)
-            self.click(s.Id("로그인 버튼", "_loginBtn"))
-            logger.info("로그인 - 인증서")
-            self.type(s.Id("인증서 비밀번호 입력상자", "certPwd"), self.__cert_pw)
-            self.click(s.Xpath("인증서 선택 확인 버튼", '//*[@id="nx-cert-select"]/div[4]/button[1]'))
+        logger.info("로그인 - 아이디 패스워드 입력")
+        self.type(s.Id("아이디 입력상자", "_id"), self.__id)
+        self.type(s.Id("패스워드 입력상자", "_pw"), self.__pw)
+        self.click(s.Id("로그인 버튼", "_loginBtn"))
+        logger.info("로그인 - 인증서")
+        self.type(s.Id("인증서 비밀번호 입력상자", "certPwd"), self.__cert_pw)
+        self.click(s.Xpath("인증서 선택 확인 버튼", '//*[@id="nx-cert-select"]/div[4]/button[1]'))
 
-            # validate login is completed
-            if self.exist(s.Id("로그인 버튼","_mLogin", timeout=3, differ=10)):
-                logger.info("로그인 버튼이 아직 있습니다. 로그인 실패로 간주합니다.")
-                return False
-            
-            return True
-
-        except Exception as e:
-            logger.error(e)
-            return False
+        # validate login is completed
+        if self.exist(s.Id("로그인 버튼","_mLogin", timeout=3, differ=10)):
+            logger.info("로그인 버튼이 아직 있습니다. 로그인 실패로 간주합니다.")
+            raise Exception("로그인 실패")
         
-
     def certificate(self, type):
         self.click(s.Id("HDD", "NX_MEDIA_HDD"))
         self.click(s.Xpath(f"{type}", f'//td/div[contains(text(),"{type}")]/img/..'))
@@ -261,19 +254,22 @@ class D2B(am.Automatic):
 
         return True
 
+
+    # 판단번호로 변경
+    # 만약 공고 번호에 수의 가 포함되어 있다면 판단 번호에 확장하여 
+    # code를 제공해야 한다. 
     def participate(self, code, cost):
         # decucing code to be searchable
         # ex. 수의LCJ0021-1-2024-00 -> LCJ0021
         # ex. 2023UMM032323380-01 -> UMM032323380
-        need_regstration = "수의" in code
-        import re
-        code = code.split('-')[0]
-        code = re.search('([a-zA-Z].*)', code).group(1)[:7]
+        logger.info(f"입찰참여: 판단코드={code}, cost={cost}")
 
+        need_regstration = "수의" in code
+        code = code.replace("수의", "")
         # 소수점이 있을 경우 입력이 불가하다고 안내한다. 
         cost = int(float(cost))
 
-        logger.info(f"입찰참여: code={code}, cost={cost}")
+       
         try:
             
             # 견적서작성 버튼이 있으면 입찰참가가 필요 없다.

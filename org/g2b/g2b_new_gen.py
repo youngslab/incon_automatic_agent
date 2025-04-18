@@ -1,4 +1,5 @@
 
+import os
 import threading
 
 import automatic as am
@@ -20,6 +21,7 @@ class G2B_new_gen(am.Automatic):
         self.__id = id
         self.__cert_public = cert_public
         self.__cert_finance = cert_finance
+        self.__driver = driver
         
         selenium = s.Context(driver, timeout=20, differ=0)
         win32 = w.Context(timeout=50, differ=0)
@@ -194,13 +196,23 @@ class G2B_new_gen(am.Automatic):
                     self.click(request)
 
                 # 금융인증서
+                time.sleep(5)
                 cert_srv_frame = s.Id("금융인증서비스 개인", "finCertSdkIframe")
-                first_access_elem = s.Xpath("첫 접속 안내.", "//b[text()='금융인증서를 이용하기 위해 클라우드 저장소에 연결합니다']", parent=cert_srv_frame)
                 need_wait = False
-                if self.exist(first_access_elem):
-                    need_wait = True
+                if self.exist(s.Id("전화번호","CLOUD_ID_2",parent=cert_srv_frame)):
+                    screenshot_path = os.path.join(os.path.expanduser("~"), ".iaa", "log", "cert_error.png")
+                    self.__driver.save_screenshot(screenshot_path)
                     logger.info("첫 번째 접속으로 금융인증서 셋업을 위한 사용자 액션이 필요합니다. 2분안에 작업을 완료하세요.")
+                    self.type(s.Id("이름","CLOUD_ID_1",parent=cert_srv_frame), "박재영")
+                    self.type(s.Id("전화번호","CLOUD_ID_2",parent=cert_srv_frame), "01031084585")
+                    self.type(s.Id("생년월일","CLOUD_ID_3",parent=cert_srv_frame), "19831119")
+                    self.click(s.Xpath("자동로그인","//span[text()='자동로그인']",parent=cert_srv_frame))
+                    self.click(s.Xpath("문자인증", "//button[@title='휴대폰 문자인증']",parent=cert_srv_frame))
+                    cert_code = self.text(s.Xpath("코드값", "//div[@class='code_confirm_number']",parent=cert_srv_frame))
+                    logger.info(f"코드값: {cert_code}")
+                    need_wait = True
 
+                logger.info("금융인증서 로그인 시작")
                 cert = s.Xpath("금융인증서", "//button[text()='인증이력']/..", parent=cert_srv_frame, timeout= 5 if not need_wait else 120)
                 self.click(cert)
                 def cert_password(pw):
@@ -210,6 +222,7 @@ class G2B_new_gen(am.Automatic):
 
                 cert_password(self.__cert_finance)
 
+            logger.info("투찰 시작")
             # 가격 입찰서 작성(투찰)하러 가기
             # 버튼이 위/아래 두 개 존재하기 때문에 둘중 하나를 클릭해야 한다. 
             btn = s.Xpath("가격 입찰서 작성(투찰)하러 가기", "//input[@value='가격 입찰서 작성(투찰)하러 가기']", multiple=True)
@@ -262,6 +275,7 @@ class G2B_new_gen(am.Automatic):
             yes_btn = s.Xpath("예 버튼", "//input[@value='예']")
             self.click(yes_btn)
 
+            logger.info("공동인증 시작")
             # 이전에 사용한 공동인증을 다시 사용할 것인지 확인
             popup = s.Xpath("팝업", "//div[contains(text(),'선택한 공동인증서를 계속 사용')]", differ=3, timeout=3)
             if self.exist(popup):

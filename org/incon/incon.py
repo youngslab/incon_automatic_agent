@@ -21,6 +21,9 @@ class Bid:
         self.title = data['공고명']
         self.price = data['산정금액']
         self.__page = self.__data['페이지']
+        self.judge_num = self.__data['판단번호']
+        if "수의" in self.number:
+            self.judge_num = "수의" + self.judge_num
         self.callbacks = callbacks
 
     def complete(self):
