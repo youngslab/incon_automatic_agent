@@ -1,4 +1,3 @@
-
 import os
 import time
 import logging
@@ -197,6 +196,7 @@ class D2B(am.Automatic):
         time.sleep(3)
         tables = []
 
+        # 물품 입찰서 신청의 경우 판단번호가 첫번째 column에 있다.
         goods_table = s.Id("참가신청서 테이블", 'SBHE_DATAGRID_WHOLE_TABLE_datagrid1', timeout=30)
         if self.exist(goods_table):
             tables.append(self.table(goods_table))
@@ -205,7 +205,12 @@ class D2B(am.Automatic):
         time.sleep(3)
         service_table = s.Id("참가신청서 테이블", 'SBHE_DATAGRID_WHOLE_TABLE_datagrid1', timeout=30)
         if self.exist(service_table):
-            tables.append(self.table(service_table))
+            table = self.table(service_table)
+            if table is not None:
+                # 용역 입찰서 신청의 경우 앞에 순번 column이 있어 다른 column들이 한칸씩 뒤에 있다. 
+                # table에서 첫번째 "순번" column을 삭제한다.
+                table.drop(table.columns[0], axis=1, inplace=True)
+                tables.append(table)
 
         tables = [ t for t in tables if t is not None]
         return pd.concat(tables, ignore_index=True)
@@ -216,11 +221,10 @@ class D2B(am.Automatic):
         # 사전등록이 되어 있는지 검증.
         logger.warning("참가신청서 검색.")
         regs = self.get_pre_registration_table()
-        row = regs[(regs[0].notna()) & (regs[0].str.contains(code))]
+        # 판단 번호 column 1
+        row = regs[(regs[1].notna()) & (regs[1].astype(str).str.contains(code))]
         if row.empty:
             logger.warning("검색된 참가신청서가 없습니다.")
-            column_values = ', '.join(row[0].astype(str).tolist())
-            logger.info(f"0번째 컬럼의 내용: {column_values}")
             return False
         
         status = str(row.iloc[0,5])

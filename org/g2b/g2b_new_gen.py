@@ -308,4 +308,3 @@ class G2B_new_gen(am.Automatic):
         except Exception as e:
             logger.error(e)
             return False
-``` 
