@@ -25,25 +25,17 @@ class D2B(am.Automatic):
         win32 = w.Context(timeout=50, differ=0)
         am.Automatic.__init__(self, [selenium, win32])
 
-    def login(self):
-        logger.info("로그인")
-    
+    def _do_login(self):
+        logger.info("로그인 시도")
         self.go(s.Url("로그인 페이지", "https://www.d2b.go.kr/index.do"))
-            # 이전상태에 따라 popup이 생성되는 경우가 있다. 
+        # 이전상태에 따라 popup이 생성되는 경우가 있다. 
         if self.exist(s.Alert("test", "", timeout=3)):
             self.accept(s.Alert("test", ""))
 
         if self.exist(s.Id("로그아웃 버튼", "_logoutBtn", timeout=3)):
             logger.info("이미 로그인 되어 있습니다.")
             return
-        
         self.click(s.Id("로그인 버튼","_mLogin"))
-    
-        # XXX: 너무 빨리 click이 되면 문제가 발생한다.
-        #       인증 프로그램 실행 준비가 안되었습니다. 설치가 안된 경우 제품을 설치 후 진행해 주시기 바랍니다
-        # TODO: 적절한 수준 찾기
-        # 3초: 가끔씩 메세지가 나오는 경우가 있다.
-        # 5초로 변경
         logger.info("Wait 5 secs. Too fast to login make problem.")
         time.sleep(5)
 
@@ -59,7 +51,22 @@ class D2B(am.Automatic):
         if self.exist(s.Id("로그인 버튼","_mLogin", timeout=3, differ=10)):
             logger.info("로그인 버튼이 아직 있습니다. 로그인 실패로 간주합니다.")
             raise Exception("로그인 실패")
-        
+
+    def login(self):
+        logger.info("로그인")
+        # XXX: 보안 프로그램이 설치는 되어 있지만, 로그인 시도시 설치 필요하다 팝업이 생성된다. 
+        # 이 때 로그인 실패 후 다시 시도하면 정상적으로 로그인된다.     
+        for attempt in range(2):
+            try:
+                self._do_login()
+                return
+            except Exception as e:
+                logger.warning(f"로그인 시도 {attempt+1} 실패: {e}")
+                if attempt == 1:
+                    raise
+                logger.info("로그인 재시도 중...")
+                time.sleep(10)
+
     def certificate(self, type):
         self.click(s.Id("HDD", "NX_MEDIA_HDD"))
         self.click(s.Xpath(f"{type}", f'//td/div[contains(text(),"{type}")]/img/..'))
@@ -225,6 +232,11 @@ class D2B(am.Automatic):
         row = regs[(regs[1].notna()) & (regs[1].astype(str).str.contains(code))]
         if row.empty:
             logger.warning("검색된 참가신청서가 없습니다.")
+            logger.warning("참가신청서에 등록된 판단번호:")
+            # 판단번호 컬럼을 문자열로 변환하지 않고, 원래 타입이 object(문자열)로 유지되도록 DataFrame 생성 시 처리 필요
+            # 여기서는 출력만 한 줄로, float은 소수점 이하 제거
+            values = regs[1].dropna().apply(lambda x: f"{int(x)}" if isinstance(x, float) and x.is_integer() else str(x))
+            logger.warning(", ".join(values))
             return False
         
         status = str(row.iloc[0,5])
@@ -263,7 +275,7 @@ class D2B(am.Automatic):
     # 만약 공고 번호에 수의 가 포함되어 있다면 판단 번호에 확장하여 
     # code를 제공해야 한다. 
     def participate(self, code, cost):
-        # decucing code to be searchable
+        # decuding code to be searchable
         # ex. 수의LCJ0021-1-2024-00 -> LCJ0021
         # ex. 2023UMM032323380-01 -> UMM032323380
         logger.info(f"입찰참여: 판단코드={code}, cost={cost}")

@@ -14,10 +14,11 @@ def create_driver(*, headless=False, profile=None, proxy=None, user_agent=None):
     options = webdriver.EdgeOptions()
     options.add_argument("window-size=1400,800")
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    options.add_argument("no-sandbox")
+    options.add_argument('disable-gpu')
 
     if headless:
         options.add_argument('headless')
-        options.add_argument('disable-gpu')
         # headless인 경우 user-agent를 다시 설정. 
         # 실제 non-headless 환경에서 쓰이는 Edge user-agent
         user_agent_ = (

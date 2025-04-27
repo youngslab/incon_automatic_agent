@@ -40,16 +40,20 @@ if exist "%GIT_ROOT%\requirements.txt" (
 )
 
 :: 5. edgedriver.exe가 실행 중이면 종료
-echo Checking for running EdgeDriver instances...
-tasklist | findstr /I "msedgedriver.exe" >nul
-if %ERRORLEVEL%==0 (
-    echo Found running msedgedriver.exe, terminating process...
-    taskkill /F /IM msedgedriver.exe
-    timeout /t 3 >nul
-) else (
-    echo No running msedgedriver.exe found.
-)
+setlocal enabledelayedexpansion
+set "PROC_SET="
 
+echo Checking for running Edge-related processes...
+for /f "tokens=1" %%i in ('tasklist ^| findstr /I "edge"') do (
+    set "PROC=%%i"
+    set "PROC_LC=!PROC!"
+    echo !PROC_SET! | findstr /I /C:"!PROC_LC!;" >nul
+    if errorlevel 1 (
+        echo Terminating process: !PROC!
+        taskkill /F /IM !PROC!
+        set "PROC_SET=!PROC_SET!!PROC_LC!;"
+    )
+)
 :: 6. agent.py 실행
 set AGENT_PATH=%GIT_ROOT%\agent.py
 if exist "%AGENT_PATH%" (

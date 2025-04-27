@@ -32,7 +32,7 @@ class Kepco(am.Automatic):
         category: ['사업자', '은행']
         """
         
-        self.click(s.Id("하드디스크",'NX_MEDIA_HDD', parent=frame))
+        self.click(s.Id("하드디스크",'NX_MEDIA_HDD', parent=frame, differ=3))
         self.click(s.Xpath("인증서",f'//td/div[contains(text(),"{category}")]', parent=frame))
 
         self.type(s.Id("보안토큰 비밀번호",'certPwd', parent=frame, differ=3), self.__certpw)
@@ -143,7 +143,13 @@ class Kepco(am.Automatic):
 
         # certificate
         logger.info("인증서 제출")
-        fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@src,"kica/kepco/kicaCert.jsp")]')        
+        fCert =  s.Xpath("인증서 로그인 프레임", '//iframe[contains(@src,"kica/kepco/kicaCert.jsp")]')
+        if not self.exist(fCert):
+            # 인증서 프레임이 없는 경우, 아래와 같은 메세지가 나올 수 있음. 
+            # "입찰참가신청등록 화면에 있는 닫기 버튼을 누르시고, 다시 신청하십시오"
+            logger.error("인증서 로그인 프레임을 찾을 수 없습니다.")
+            self.click(s.Xpath("닫기버튼", "//span[text()='제출']/../../../../a/span/span/span[text()='닫기']"))
+            return False
         self.certificate("사업자", fCert)
 
         # 제출하였습니다. 
